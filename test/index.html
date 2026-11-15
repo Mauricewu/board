@@ -19,6 +19,16 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 var(--f-body)}
 .office{position:relative;width:100%;aspect-ratio:1200/670;border-radius:6px;overflow:hidden;background:#111;border:3px solid #000}
 .office img{position:absolute;image-rendering:pixelated;display:block}
 .office img.bg{inset:0;width:100%;height:100%}
+.office img.fr{display:none}.office img.fr.on{display:block}
+.office img.chiimg{transform:translateX(-50%);height:auto}.office img.chiimg.flip{transform:translateX(-50%) scaleX(-1)}
+.office img.cheerimg.on{animation:hop .6s ease-in-out infinite}
+@keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-3%)}}
+.bub{position:absolute;transform:translateX(-50%);z-index:4;background:#fffdf8;border:2px solid #111;padding:1px 8px;font-family:var(--f-pixel);font-size:clamp(10px,2.6vw,16px);color:#111;white-space:nowrap;pointer-events:none;display:none;line-height:1.4}
+.bub.on{display:block}
+.bub::after{content:"";position:absolute;left:50%;top:100%;margin-left:-4px;border:4px solid transparent;border-top-color:#111}
+.bub.alert{background:#fff0c2;color:#c0391b;font-weight:700;font-size:clamp(14px,3.6vw,22px);animation:blink 1s steps(2,end) infinite}
+@keyframes blink{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.bub.alert,.office img.cheerimg.on{animation:none}}
 .plate{position:absolute;bottom:3%;width:30%;text-align:center;font-family:var(--f-pixel);color:#f6d77a;font-size:clamp(12px,3vw,20px)}
 .sechead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:4px 2px 0}
 .sechead h2{margin:0;font-family:var(--f-pixel);font-weight:400;font-size:19px;letter-spacing:.05em;color:var(--gold)}
@@ -99,7 +109,7 @@ details.mt>summary{cursor:pointer;color:var(--gold);margin-top:10px}
 // 這三行由 build.py 在產生正式版與測試版時填入
 var API_URL = 'https://script.google.com/macros/s/AKfycbyNFegumx38Y97kIiLtW_67ZRcYS8VXqmiH9eyTF3BPaneFv6tkdM5vlL_jOn3-OShH/exec';
 var TEST_MODE = true;
-var ART = {"neichang_cheer": "../art/neichang_cheer.png", "neichang_sit_sleep": "../art/neichang_sit_sleep.png", "neichang_sit_type1": "../art/neichang_sit_type1.png", "neichang_sit_type2": "../art/neichang_sit_type2.png", "neichang_stand": "../art/neichang_stand.png", "neichang_walk1": "../art/neichang_walk1.png", "neichang_walk2": "../art/neichang_walk2.png", "neichang_walk3": "../art/neichang_walk3.png", "office_bg": "../art/office_bg.webp", "waichang_cheer": "../art/waichang_cheer.png", "waichang_sit_sleep": "../art/waichang_sit_sleep.png", "waichang_sit_type1": "../art/waichang_sit_type1.png", "waichang_sit_type2": "../art/waichang_sit_type2.png", "waichang_stand": "../art/waichang_stand.png", "waichang_walk1": "../art/waichang_walk1.png", "waichang_walk2": "../art/waichang_walk2.png", "waichang_walk3": "../art/waichang_walk3.png"};
+var ART = {"neichang_cheer": "../art/neichang_cheer.png", "neichang_sit_sleep": "../art/neichang_sit_sleep.png", "neichang_sit_type1": "../art/neichang_sit_type1.png", "neichang_sit_type2": "../art/neichang_sit_type2.png", "neichang_stand": "../art/neichang_stand.png", "neichang_walk1": "../art/neichang_walk1.png", "neichang_walk2": "../art/neichang_walk2.png", "neichang_walk3": "../art/neichang_walk3.png", "office_bg": "../art/office_bg.webp", "waichang_cheer": "../art/waichang_cheer.png", "waichang_sit_sleep": "../art/waichang_sit_sleep.png", "waichang_sit_type1": "../art/waichang_sit_type1.png", "waichang_sit_type2": "../art/waichang_sit_type2.png", "waichang_stand": "../art/waichang_stand.png", "waichang_walk1": "../art/waichang_walk1.png", "waichang_walk2": "../art/waichang_walk2.png", "waichang_walk3": "../art/waichang_walk3.png", "chi_walk1": "../art/chi_walk1.webp", "chi_walk2": "../art/chi_walk2.webp", "chi_howl1": "../art/chi_howl1.webp", "chi_howl2": "../art/chi_howl2.webp", "neichang_sitf_type1": "../art/neichang_sitf_type1.png", "neichang_sitf_type2": "../art/neichang_sitf_type2.png", "neichang_sitf_sleep": "../art/neichang_sitf_sleep.png", "waichang_sitf_type1": "../art/waichang_sitf_type1.png", "waichang_sitf_type2": "../art/waichang_sitf_type2.png", "waichang_sitf_sleep": "../art/waichang_sitf_sleep.png"};
 var MODEL = { state: 'loading', readAt: '' };
 var STATUSES = ['未開始', '進行中', '完成', '卡住'];
 var MAX_MS = 15;
@@ -114,15 +124,110 @@ function fmtD(s){var m=/^\d{4}-(\d{2})-(\d{2})$/.exec(s||'');return m?(+m[1])+'/
 function fmtT(s){var m=/^\d{4}-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(s||'');return m?(+m[1])+'/'+(+m[2])+' '+m[3]+':'+m[4]:esc(s||'');}
 function $(id){return document.getElementById(id);}
 
-function office(){
-  // 辦公室動畫在里程碑 9 做，這裡先放靜態圖
-  return '<div class="office">'+
-    '<img class="bg" src="'+ART.office_bg+'" alt="">'+
-    '<img src="'+ART.neichang_sit_type1+'" style="left:20.33%;top:33.28%;width:13%" alt="">'+
-    '<img src="'+ART.waichang_sit_type1+'" style="left:67.5%;top:33.73%;width:12.75%" alt="">'+
-    '<div class="plate" style="left:10%">內場主管</div>'+
-    '<div class="plate" style="left:60%">外場主管</div>'+
-  '</div>';
+/* ---------- 像素辦公室（里程碑 9）：兩位主管＋吉娃娃 ----------
+   動作只由交辦資料決定：驚嘆號＞打字＞歡呼＞趴睡（優先順序由前到後）。
+   整段包在 try 裡，出錯只會停掉辦公室動畫，不影響交辦、行事曆、會議記錄。 */
+var SEAT = {
+  neichang: { name: '內場主管', left: 21.11, top: 33.28, w: 13.42, cx: 25, cheerW: 18.7, cheerTop: 39, bubX: 26, bubTop: 24 },
+  waichang: { name: '外場主管', left: 67.43, top: 33.73, w: 13.88, cx: 73, cheerW: 12.8, cheerTop: 46.8, bubX: 74, bubTop: 24 }
+};
+var ROLE_SPRITE = { '內場主管': 'neichang', '外場主管': 'waichang' };
+var CHI = { W: { walk1: 5.69, walk2: 5.6, howl1: 6.24, howl2: 6.15 }, X_MIN: 41, X_MAX: 59, BOTTOM: 12, SPEED: 4, WALK_MS: 10000, HOWL_MS: 2500, BUB_BOTTOM: 28 };
+var OFFICE = { raf: 0, x: 50, dir: 1, howling: false, t0: null, last: null };
+
+function officeModel(m){
+  var tasks=(m.data&&m.data.tasks)||[], res={neichang:null,waichang:null,chi:null};
+  function judge(p){
+    var mine=tasks.filter(function(t){return !t.archived&&t.owners.indexOf(p.name)>=0;});
+    var open=mine.filter(function(t){return t.status!=='完成';});
+    var alert=mine.some(function(t){return t.overdue||t.unreplied;});
+    return {st:alert?'alert':(open.length?'type':(mine.length?'cheer':'sleep')), open:open.length};
+  }
+  (m.people||[]).forEach(function(p){
+    var sp=ROLE_SPRITE[p.role];
+    if(sp&&!res[sp])res[sp]=judge(p);
+    else if(p.role==='行銷'&&!res.chi)res.chi=judge(p);
+  });
+  return res;
+}
+function chiText(c){
+  if(!c)return '';
+  if(c.st==='alert')return '凹嗚嗚嗚嗚';
+  if(c.st==='type')return '未完成 '+c.open+' 件';
+  return c.st==='cheer'?'全部完成':'沒有交辦';
+}
+function office(m){
+  var M=officeModel(m),lab=[];
+  var h='<div class="office" id="office"><img class="bg" src="'+ART.office_bg+'" alt="">';
+  ['neichang','waichang'].forEach(function(sp){
+    var s=SEAT[sp],o=M[sp]||{st:'sleep'},cls=o.st==='alert'?'type':o.st;
+    var first={type:'sitf_type1',sleep:'sitf_sleep',cheer:'cheer'}[cls];
+    lab.push(s.name+'：'+{alert:'有交辦待處理',type:'處理交辦中',cheer:'交辦全部完成',sleep:'目前沒有交辦'}[o.st]);
+    h+='<div class="pc" data-sp="'+sp+'" data-st="'+o.st+'">';
+    ['sitf_type1','sitf_type2','sitf_sleep'].forEach(function(k){
+      h+='<img class="fr'+(k===first?' on':'')+'" data-f="'+k+'" src="'+ART[sp+'_'+k]+'" alt="" style="left:'+s.left+'%;top:'+s.top+'%;width:'+s.w+'%">';
+    });
+    h+='<img class="fr cheerimg'+(first==='cheer'?' on':'')+'" data-f="cheer" src="'+ART[sp+'_cheer']+'" alt="" style="left:'+(s.cx-s.cheerW/2)+'%;top:'+s.cheerTop+'%;width:'+s.cheerW+'%">';
+    h+='<div class="bub alert'+(o.st==='alert'?' on':'')+'" data-bub="1" style="left:'+s.bubX+'%;top:'+s.bubTop+'%">！</div></div>';
+  });
+  var c=M.chi,howl=c&&c.st==='alert';
+  lab.push('吉娃娃人柱力：'+(c?{alert:'有交辦待處理',type:'處理交辦中',cheer:'交辦全部完成',sleep:'目前沒有交辦'}[c.st]:'沒有資料'));
+  h+='<div class="pc" data-sp="chi" data-st="'+(c?c.st:'none')+'" data-mode="'+(howl?'howl':'walk')+'">';
+  ['walk1','walk2','howl1','howl2'].forEach(function(k){
+    var first=howl?'howl1':'walk1';
+    h+='<img class="fr chiimg'+(k===first?' on':'')+'" data-f="'+k+'" src="'+ART['chi_'+k]+'" alt="" style="left:'+OFFICE.x+'%;bottom:'+CHI.BOTTOM+'%;width:'+CHI.W[k]+'%">';
+  });
+  h+='<div class="bub chibub'+(c?' on':'')+'" data-bub="1" data-open="'+(c?c.open:0)+'" style="left:'+OFFICE.x+'%;bottom:'+CHI.BUB_BOTTOM+'%">'+esc(chiText(c))+'</div></div>';
+  h+='<div class="plate" style="left:10%">內場主管</div><div class="plate" style="left:60%">外場主管</div>';
+  return h.replace('class="office" id="office"','class="office" id="office" role="img" aria-label="'+esc(lab.join('；'))+'"')+'</div>';
+}
+function stopOffice(){if(OFFICE.raf){cancelAnimationFrame(OFFICE.raf);OFFICE.raf=0;}}
+function startOffice(){
+  stopOffice();
+  try{
+    var root=$('office');if(!root)return;
+    if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    var pcs={};[].forEach.call(root.querySelectorAll('.pc'),function(e){pcs[e.getAttribute('data-sp')]=e;});
+    function imgs(pc){var o={};[].forEach.call(pc.querySelectorAll('img.fr'),function(e){o[e.getAttribute('data-f')]=e;});return o;}
+    var cur={};   // 各角色目前顯示的格子，沒變就不動 DOM
+    function setFrame(id,pc,list,key){
+      if(cur[id]===key)return;cur[id]=key;
+      for(var k in list)list[k].classList[k===key?'add':'remove']('on');
+    }
+    var seat={};['neichang','waichang'].forEach(function(sp){if(pcs[sp])seat[sp]={pc:pcs[sp],list:imgs(pcs[sp]),st:pcs[sp].getAttribute('data-st')};});
+    var chi=pcs.chi?{pc:pcs.chi,list:imgs(pcs.chi),st:pcs.chi.getAttribute('data-st'),bub:pcs.chi.querySelector('.chibub')}:null;
+    function frame(t){
+      try{
+        if(OFFICE.t0===null){OFFICE.t0=t;OFFICE.last=t;}
+        var dt=Math.min(t-OFFICE.last,100)/1000;OFFICE.last=t;
+        ['neichang','waichang'].forEach(function(sp,i){
+          var s=seat[sp];if(!s)return;
+          if(s.st==='alert'||s.st==='type')setFrame(sp,s.pc,s.list,(Math.floor((t+i*200)/400)%2)?'sitf_type2':'sitf_type1');
+        });
+        if(chi){
+          var alert=chi.st==='alert',el=t-OFFICE.t0;
+          if(alert&&!OFFICE.howling){OFFICE.howling=true;OFFICE.t0=t;el=0;}
+          if(!alert&&OFFICE.howling&&el>=CHI.HOWL_MS){OFFICE.howling=false;OFFICE.t0=t;el=0;}
+          if(!alert&&!OFFICE.howling&&el>=CHI.WALK_MS){OFFICE.howling=true;OFFICE.t0=t;el=0;}
+          var key,bob=0,txt;
+          if(OFFICE.howling){
+            key=(Math.floor(el/400)%2)?'howl2':'howl1';txt='凹嗚嗚嗚嗚';
+          }else{
+            OFFICE.x+=OFFICE.dir*CHI.SPEED*dt;
+            if(OFFICE.x>CHI.X_MAX){OFFICE.x=CHI.X_MAX;OFFICE.dir=-1;}else if(OFFICE.x<CHI.X_MIN){OFFICE.x=CHI.X_MIN;OFFICE.dir=1;}
+            var odd=Math.floor(t/200)%2;key=odd?'walk2':'walk1';bob=odd?0.6:0;txt=chi.st==='none'?'':chiText({st:chi.st,open:+chi.bub.getAttribute('data-open')||0});
+          }
+          setFrame('chi',chi.pc,chi.list,key);
+          for(var k in chi.list){var im=chi.list[k];im.style.left=OFFICE.x+'%';im.style.bottom=(CHI.BOTTOM+bob)+'%';im.classList[OFFICE.dir<0?'add':'remove']('flip');}
+          chi.bub.style.left=OFFICE.x+'%';
+          if(chi.bub.getAttribute('data-txt')!==txt){chi.bub.setAttribute('data-txt',txt);chi.bub.textContent=txt;}
+          var mode=OFFICE.howling?'howl':'walk';if(chi.pc.getAttribute('data-mode')!==mode)chi.pc.setAttribute('data-mode',mode);
+        }
+        OFFICE.raf=requestAnimationFrame(frame);
+      }catch(e){OFFICE.raf=0;}   // 辦公室動畫壞了就停在那裡，其他內容照常
+    }
+    OFFICE.raf=requestAnimationFrame(frame);
+  }catch(e){OFFICE.raf=0;}
 }
 
 function screenshotHint(){
@@ -271,6 +376,7 @@ function meetingHtml(m){
 }
 
 function render(m,nocollect){
+  stopOffice();
   if(!nocollect)collect();
   var y=window.scrollY;
   var h='';
@@ -280,7 +386,7 @@ function render(m,nocollect){
 
   if(m.state==='ok'){
     var boss=isBoss(m),d=m.data;
-    h+=office();
+    h+=office(m);
     if(boss&&(m.warnings||[]).length){
       h+='<div class="box warn"><h3>「人員」分頁有問題（只有老闆看得到）</h3><ul>'+
         m.warnings.map(function(w){return '<li>第 '+w.line+' 列：'+esc(w.text)+'</li>';}).join('')+'</ul></div>';
@@ -320,6 +426,7 @@ function render(m,nocollect){
 
   if(m.state!=='invalid'&&m.state!=='loading')h+='<div class="foot"><span>'+(m.readAt?'讀取時間 '+esc(m.readAt):'')+'</span><button id="reload" data-act="reload">重新整理</button></div>';
   $('app').innerHTML=h;
+  startOffice();
   restore();
   window.scrollTo(0,y);
   ui.pop=null;
