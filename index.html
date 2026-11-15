@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>連線測試</title>
+<style>
+  body { font-family: -apple-system, "Noto Sans TC", sans-serif; margin: 24px; line-height: 1.6; color: #222; background: #fff; }
+  h1 { font-size: 20px; }
+  .row { padding: 10px 12px; border-radius: 8px; margin: 10px 0; background: #f2f2f2; }
+  .ok { background: #e3f5e1; }
+  .bad { background: #fde2e1; }
+  small { color: #666; }
+</style>
+</head>
+<body>
+<h1>主管平台連線測試</h1>
+<p>這頁只用來測試，不含任何店內資料。</p>
+<div id="get" class="row">讀取測試：進行中…</div>
+<div id="post" class="row">送出測試：進行中…</div>
+<p id="summary"></p>
+<small id="ua"></small>
+
+<script>
+// 測試用 Apps Script 的網址（部署後填入）
+var API_URL = 'https://script.google.com/macros/s/AKfycbxGBpXwxpNBjqOms_TnOtD2sjaAL8c_AcpR6vxyTMNwklqPu0ldK5g4HDLPUjJQUjmu/exec';
+
+var k = new URLSearchParams(location.search).get('k') || '';
+
+function show(id, ok, text) {
+  var el = document.getElementById(id);
+  el.className = 'row ' + (ok ? 'ok' : 'bad');
+  el.textContent = text;
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise(function (_, reject) {
+      setTimeout(function () { reject(new Error('超過 ' + (ms / 1000) + ' 秒沒有回應')); }, ms);
+    })
+  ]);
+}
+
+async function testGet() {
+  var res = await withTimeout(fetch(API_URL + '?k=' + encodeURIComponent(k), { credentials: 'omit' }), 15000);
+  var data = await res.json();
+  if (!data.ok || data.received !== k) throw new Error('回傳內容不對');
+  return data;
+}
+
+async function testPost() {
+  var res = await withTimeout(fetch(API_URL, {
+    method: 'POST',
+    credentials: 'omit',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ k: k, note: '測試送出' })
+  }), 15000);
+  var data = await res.json();
+  if (!data.ok || data.received !== k || data.note !== '測試送出') throw new Error('回傳內容不對');
+  return data;
+}
+
+(async function () {
+  document.getElementById('ua').textContent = '瀏覽器：' + navigator.userAgent;
+  var okCount = 0;
+  try {
+    var g = await testGet();
+    show('get', true, '讀取測試：成功（伺服器時間 ' + g.serverTime + '）');
+    okCount++;
+  } catch (e) {
+    show('get', false, '讀取測試：失敗（' + e.message + '）');
+  }
+  try {
+    var p = await testPost();
+    show('post', true, '送出測試：成功（伺服器時間 ' + p.serverTime + '）');
+    okCount++;
+  } catch (e) {
+    show('post', false, '送出測試：失敗（' + e.message + '）');
+  }
+  document.getElementById('summary').textContent =
+    okCount === 2 ? '兩項都成功：這條路行得通。' : '有項目失敗：請截圖給 Claude。';
+})();
+</script>
+</body>
+</html>
