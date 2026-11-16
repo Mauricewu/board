@@ -109,7 +109,7 @@ details.mt>summary{cursor:pointer;color:var(--gold);margin-top:10px}
 // 這三行由 build.py 在產生正式版與測試版時填入
 var API_URL = 'https://script.google.com/macros/s/AKfycbwoJADN-Jyqfb9rUXuiutn5Dtc3JCDYJWlhrfDXd8sPycelqK7vsMA9gA63KkO0h478/exec';
 var TEST_MODE = false;
-var ART = {"neichang_cheer": "art/neichang_cheer.png", "neichang_sit_sleep": "art/neichang_sit_sleep.png", "neichang_sit_type1": "art/neichang_sit_type1.png", "neichang_sit_type2": "art/neichang_sit_type2.png", "neichang_stand": "art/neichang_stand.png", "neichang_walk1": "art/neichang_walk1.png", "neichang_walk2": "art/neichang_walk2.png", "neichang_walk3": "art/neichang_walk3.png", "office_bg": "art/office_bg.webp", "waichang_cheer": "art/waichang_cheer.png", "waichang_sit_sleep": "art/waichang_sit_sleep.png", "waichang_sit_type1": "art/waichang_sit_type1.png", "waichang_sit_type2": "art/waichang_sit_type2.png", "waichang_stand": "art/waichang_stand.png", "waichang_walk1": "art/waichang_walk1.png", "waichang_walk2": "art/waichang_walk2.png", "waichang_walk3": "art/waichang_walk3.png", "chi_walk1": "art/chi_walk1.webp", "chi_walk2": "art/chi_walk2.webp", "chi_howl1": "art/chi_howl1.webp", "chi_howl2": "art/chi_howl2.webp", "neichang_sitf_type1": "art/neichang_sitf_type1.png", "neichang_sitf_type2": "art/neichang_sitf_type2.png", "neichang_sitf_sleep": "art/neichang_sitf_sleep.png", "waichang_sitf_type1": "art/waichang_sitf_type1.png", "waichang_sitf_type2": "art/waichang_sitf_type2.png", "waichang_sitf_sleep": "art/waichang_sitf_sleep.png"};
+var ART = {"neichang_cheer": "art/neichang_cheer.png", "neichang_sit_sleep": "art/neichang_sit_sleep.png", "neichang_sit_type1": "art/neichang_sit_type1.png", "neichang_sit_type2": "art/neichang_sit_type2.png", "neichang_stand": "art/neichang_stand.png", "neichang_walk1": "art/neichang_walk1.png", "neichang_walk2": "art/neichang_walk2.png", "neichang_walk3": "art/neichang_walk3.png", "office_bg": "art/office_bg.webp", "waichang_cheer": "art/waichang_cheer.png", "waichang_sit_sleep": "art/waichang_sit_sleep.png", "waichang_sit_type1": "art/waichang_sit_type1.png", "waichang_sit_type2": "art/waichang_sit_type2.png", "waichang_stand": "art/waichang_stand.png", "waichang_walk1": "art/waichang_walk1.png", "waichang_walk2": "art/waichang_walk2.png", "waichang_walk3": "art/waichang_walk3.png", "chi_walk1": "art/chi_walk1.webp", "chi_walk2": "art/chi_walk2.webp", "chi_howl1": "art/chi_howl1.webp", "chi_howl2": "art/chi_howl2.webp", "neichang_sitf_type1": "art/neichang_sitf_type1.png", "neichang_sitf_type2": "art/neichang_sitf_type2.png", "neichang_sitf_sleep": "art/neichang_sitf_sleep.png", "waichang_sitf_type1": "art/waichang_sitf_type1.png", "waichang_sitf_type2": "art/waichang_sitf_type2.png", "waichang_sitf_sleep": "art/waichang_sitf_sleep.png", "waichang2_sitf_type1": "art/waichang2_sitf_type1.png", "waichang2_sitf_type2": "art/waichang2_sitf_type2.png", "waichang2_sitf_sleep": "art/waichang2_sitf_sleep.png", "waichang2_cheer": "art/waichang2_cheer.png", "waichang2_cry": "art/waichang2_cry.png"};
 var MODEL = { state: 'loading', readAt: '' };
 var STATUSES = ['未開始', '進行中', '完成', '卡住'];
 var MAX_MS = 15;
@@ -129,7 +129,7 @@ function $(id){return document.getElementById(id);}
    整段包在 try 裡，出錯只會停掉辦公室動畫，不影響交辦、行事曆、會議記錄。 */
 var SEAT = {
   neichang: { name: '內場主管', left: 21.11, top: 33.28, w: 13.42, cx: 25, cheerW: 18.7, cheerTop: 39, bubX: 26, bubTop: 24 },
-  waichang: { name: '外場主管', left: 67.43, top: 33.73, w: 13.88, cx: 73, cheerW: 12.8, cheerTop: 46.8, bubX: 74, bubTop: 24 }
+  waichang: { name: '外場主管', art: 'waichang2', left: 66.584, top: 32.216, w: 15.571, cx: 73, cheerW: 13.105, cheerTop: 42.14, bubX: 74, bubTop: 24, cryW: 15.995, cryTop: 48.45, cryBubBottom: 51.2 }
 };
 var ROLE_SPRITE = { '內場主管': 'neichang', '外場主管': 'waichang' };
 var CHI = { W: { walk1: 5.69, walk2: 5.6, howl1: 6.24, howl2: 6.15 }, X_MIN: 41, X_MAX: 59, BOTTOM: 12, SPEED: 4, WALK_MS: 10000, HOWL_MS: 2500, BUB_BOTTOM: 28 };
@@ -152,7 +152,7 @@ function officeModel(m){
 }
 function chiText(c){
   if(!c)return '';
-  if(c.st==='alert')return '凹嗚嗚嗚嗚';
+  if(c.st==='alert')return '！';
   if(c.st==='type')return '未完成 '+c.open+' 件';
   return c.st==='cheer'?'全部完成':'沒有交辦';
 }
@@ -161,23 +161,24 @@ function office(m){
   var h='<div class="office" id="office"><img class="bg" src="'+ART.office_bg+'" alt="">';
   ['neichang','waichang'].forEach(function(sp){
     var s=SEAT[sp],o=M[sp]||{st:'sleep'},cls=o.st==='alert'?'type':o.st;
-    var first={type:'sitf_type1',sleep:'sitf_sleep',cheer:'cheer'}[cls];
+    var first={type:'sitf_type1',sleep:'sitf_sleep',cheer:'cheer'}[cls],pre=s.art||sp,cry=!!s.cryW&&o.st==='alert';if(cry)first='cry';
     lab.push(s.name+'：'+{alert:'有交辦待處理',type:'處理交辦中',cheer:'交辦全部完成',sleep:'目前沒有交辦'}[o.st]);
     h+='<div class="pc" data-sp="'+sp+'" data-st="'+o.st+'">';
     ['sitf_type1','sitf_type2','sitf_sleep'].forEach(function(k){
-      h+='<img class="fr'+(k===first?' on':'')+'" data-f="'+k+'" src="'+ART[sp+'_'+k]+'" alt="" style="left:'+s.left+'%;top:'+s.top+'%;width:'+s.w+'%">';
+      h+='<img class="fr'+(k===first?' on':'')+'" data-f="'+k+'" src="'+ART[pre+'_'+k]+'" alt="" style="left:'+s.left+'%;top:'+s.top+'%;width:'+s.w+'%">';
     });
-    h+='<img class="fr cheerimg'+(first==='cheer'?' on':'')+'" data-f="cheer" src="'+ART[sp+'_cheer']+'" alt="" style="left:'+(s.cx-s.cheerW/2)+'%;top:'+s.cheerTop+'%;width:'+s.cheerW+'%">';
-    h+='<div class="bub alert'+(o.st==='alert'?' on':'')+'" data-bub="1" style="left:'+s.bubX+'%;top:'+s.bubTop+'%">！</div></div>';
+    h+='<img class="fr cheerimg'+(first==='cheer'?' on':'')+'" data-f="cheer" src="'+ART[pre+'_cheer']+'" alt="" style="left:'+(s.cx-s.cheerW/2)+'%;top:'+s.cheerTop+'%;width:'+s.cheerW+'%">';
+    if(s.cryW)h+='<img class="fr cryimg'+(cry?' on':'')+'" data-f="cry" src="'+ART[pre+'_cry']+'" alt="" style="left:'+(s.cx-s.cryW/2)+'%;top:'+s.cryTop+'%;width:'+s.cryW+'%">';
+    h+='<div class="bub alert'+(o.st==='alert'?' on':'')+'" data-bub="1" style="left:'+(cry?s.cx:s.bubX)+'%;'+(cry?'bottom:'+s.cryBubBottom:'top:'+s.bubTop)+'%">'+(cry?'凹嗚嗚嗚嗚':'！')+'</div></div>';
   });
-  var c=M.chi,howl=c&&c.st==='alert';
+  var c=M.chi,howl=false,stand=!!c&&c.st==='alert';
   lab.push('吉娃娃人柱力：'+(c?{alert:'有交辦待處理',type:'處理交辦中',cheer:'交辦全部完成',sleep:'目前沒有交辦'}[c.st]:'沒有資料'));
   h+='<div class="pc" data-sp="chi" data-st="'+(c?c.st:'none')+'" data-mode="'+(howl?'howl':'walk')+'">';
   ['walk1','walk2','howl1','howl2'].forEach(function(k){
     var first=howl?'howl1':'walk1';
     h+='<img class="fr chiimg'+(k===first?' on':'')+'" data-f="'+k+'" src="'+ART['chi_'+k]+'" alt="" style="left:'+OFFICE.x+'%;bottom:'+CHI.BOTTOM+'%;width:'+CHI.W[k]+'%">';
   });
-  h+='<div class="bub chibub'+(c?' on':'')+'" data-bub="1" data-open="'+(c?c.open:0)+'" style="left:'+OFFICE.x+'%;bottom:'+CHI.BUB_BOTTOM+'%">'+esc(chiText(c))+'</div></div>';
+  h+='<div class="bub chibub'+(c?' on':'')+(stand?' alert':'')+'" data-bub="1" data-open="'+(c?c.open:0)+'" style="left:'+OFFICE.x+'%;bottom:'+CHI.BUB_BOTTOM+'%">'+esc(chiText(c))+'</div></div>';
   h+='<div class="plate" style="left:10%">內場主管</div><div class="plate" style="left:60%">外場主管</div>';
   return h.replace('class="office" id="office"','class="office" id="office" role="img" aria-label="'+esc(lab.join('；'))+'"')+'</div>';
 }
@@ -202,15 +203,16 @@ function startOffice(){
         var dt=Math.min(t-OFFICE.last,100)/1000;OFFICE.last=t;
         ['neichang','waichang'].forEach(function(sp,i){
           var s=seat[sp];if(!s)return;
-          if(s.st==='alert'||s.st==='type')setFrame(sp,s.pc,s.list,(Math.floor((t+i*200)/400)%2)?'sitf_type2':'sitf_type1');
+          if(s.st==='alert'&&s.list.cry)setFrame(sp,s.pc,s.list,'cry');else if(s.st==='alert'||s.st==='type')setFrame(sp,s.pc,s.list,(Math.floor((t+i*200)/400)%2)?'sitf_type2':'sitf_type1');
         });
         if(chi){
           var alert=chi.st==='alert',el=t-OFFICE.t0;
-          if(alert&&!OFFICE.howling){OFFICE.howling=true;OFFICE.t0=t;el=0;}
+          if(alert&&OFFICE.howling){OFFICE.howling=false;OFFICE.t0=t;el=0;}
           if(!alert&&OFFICE.howling&&el>=CHI.HOWL_MS){OFFICE.howling=false;OFFICE.t0=t;el=0;}
           if(!alert&&!OFFICE.howling&&el>=CHI.WALK_MS){OFFICE.howling=true;OFFICE.t0=t;el=0;}
           var key,bob=0,txt;
-          if(OFFICE.howling){
+          if(alert){key='walk1';txt='！';}
+          else if(OFFICE.howling){
             key=(Math.floor(el/400)%2)?'howl2':'howl1';txt='凹嗚嗚嗚嗚';
           }else{
             OFFICE.x+=OFFICE.dir*CHI.SPEED*dt;
@@ -219,7 +221,7 @@ function startOffice(){
           }
           setFrame('chi',chi.pc,chi.list,key);
           for(var k in chi.list){var im=chi.list[k];im.style.left=OFFICE.x+'%';im.style.bottom=(CHI.BOTTOM+bob)+'%';im.classList[OFFICE.dir<0?'add':'remove']('flip');}
-          chi.bub.style.left=OFFICE.x+'%';
+          chi.bub.style.left=OFFICE.x+'%';chi.bub.classList[alert?'add':'remove']('alert');
           if(chi.bub.getAttribute('data-txt')!==txt){chi.bub.setAttribute('data-txt',txt);chi.bub.textContent=txt;}
           var mode=OFFICE.howling?'howl':'walk';if(chi.pc.getAttribute('data-mode')!==mode)chi.pc.setAttribute('data-mode',mode);
         }
