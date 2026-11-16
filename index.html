@@ -125,15 +125,18 @@ function fmtT(s){var m=/^\d{4}-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(s||'');retu
 function $(id){return document.getElementById(id);}
 
 /* ---------- 像素辦公室（里程碑 9）：兩位主管＋吉娃娃 ----------
-   動作只由交辦資料決定：驚嘆號＞打字＞歡呼＞趴睡（優先順序由前到後）。
+   動作只由交辦資料決定：驚嘆號（坐著打字＋頭上「！」）＞打字＞歡呼＞趴睡；另有特殊動作每 30 秒一次（見 SPECIAL）。
    整段包在 try 裡，出錯只會停掉辦公室動畫，不影響交辦、行事曆、會議記錄。 */
 var SEAT = {
-  neichang: { name: '內場主管', left: 21.11, top: 33.28, w: 13.42, cx: 25, cheerW: 18.7, cheerTop: 39, bubX: 26, bubTop: 24 },
-  waichang: { name: '外場主管', art: 'waichang2', left: 66.584, top: 32.216, w: 15.571, cx: 73, cheerW: 13.105, cheerTop: 42.14, bubX: 74, bubTop: 24, cryW: 15.995, cryTop: 48.45, cryBubBottom: 51.2 }
+  neichang: { name: '內場主管', left: 21.11, top: 33.28, w: 13.42, cx: 25, cheerArt: 'stand', cheerCx: 28.3, cheerW: 10.97, cheerTop: 43.1, spArt: 'cheer', spW: 18.7, spTop: 39, spHop: true, bubX: 26, bubTop: 24, first: 20000 },
+  waichang: { name: '外場主管', art: 'waichang2', left: 66.584, top: 32.216, w: 15.571, cx: 73, cheerArt: 'cheer', cheerW: 13.105, cheerTop: 42.14, spArt: 'cry', spW: 15.995, spTop: 48.45, spBub: '凹嗚嗚嗚嗚', spBubBottom: 51.2, bubX: 74, bubTop: 24, first: 30000 }
 };
 var ROLE_SPRITE = { '內場主管': 'neichang', '外場主管': 'waichang' };
 var CHI = { W: { walk1: 5.69, walk2: 5.6, howl1: 6.24, howl2: 6.15 }, X_MIN: 41, X_MAX: 59, BOTTOM: 12, SPEED: 4, WALK_MS: 10000, HOWL_MS: 2500, BUB_BOTTOM: 28 };
-var OFFICE = { raf: 0, x: 50, dir: 1, howling: false, t0: null, last: null };
+var OFFICE = { raf: 0, x: 50, dir: 1, g0: null, last: null };
+/* 特殊動作（內場舉鍋子、外場哭「凹嗚嗚嗚嗚」、吉娃娃嚎叫）：各自每 30 秒一次、一次 2.5 秒，第一次分別在第 10、20、30 秒，錯開不重疊；趴睡的人不做。 */
+var SPECIAL = { EVERY: 30000, MS: 2500, CHI_FIRST: 10000 };
+function inSpecial(el,first){return el>=first&&(el-first)%SPECIAL.EVERY<SPECIAL.MS;}
 
 function officeModel(m){
   var tasks=(m.data&&m.data.tasks)||[], res={neichang:null,waichang:null,chi:null};
@@ -161,24 +164,25 @@ function office(m){
   var h='<div class="office" id="office"><img class="bg" src="'+ART.office_bg+'" alt="">';
   ['neichang','waichang'].forEach(function(sp){
     var s=SEAT[sp],o=M[sp]||{st:'sleep'},cls=o.st==='alert'?'type':o.st;
-    var first={type:'sitf_type1',sleep:'sitf_sleep',cheer:'cheer'}[cls],pre=s.art||sp,cry=!!s.cryW&&o.st==='alert';if(cry)first='cry';
+    var first={type:'sitf_type1',sleep:'sitf_sleep',cheer:'cheer'}[cls],pre=s.art||sp,ccx=s.cheerCx||s.cx;
     lab.push(s.name+'：'+{alert:'有交辦待處理',type:'處理交辦中',cheer:'交辦全部完成',sleep:'目前沒有交辦'}[o.st]);
     h+='<div class="pc" data-sp="'+sp+'" data-st="'+o.st+'">';
     ['sitf_type1','sitf_type2','sitf_sleep'].forEach(function(k){
       h+='<img class="fr'+(k===first?' on':'')+'" data-f="'+k+'" src="'+ART[pre+'_'+k]+'" alt="" style="left:'+s.left+'%;top:'+s.top+'%;width:'+s.w+'%">';
     });
-    h+='<img class="fr cheerimg'+(first==='cheer'?' on':'')+'" data-f="cheer" src="'+ART[pre+'_cheer']+'" alt="" style="left:'+(s.cx-s.cheerW/2)+'%;top:'+s.cheerTop+'%;width:'+s.cheerW+'%">';
-    if(s.cryW)h+='<img class="fr cryimg'+(cry?' on':'')+'" data-f="cry" src="'+ART[pre+'_cry']+'" alt="" style="left:'+(s.cx-s.cryW/2)+'%;top:'+s.cryTop+'%;width:'+s.cryW+'%">';
-    h+='<div class="bub alert'+(o.st==='alert'?' on':'')+'" data-bub="1" style="left:'+(cry?s.cx:s.bubX)+'%;'+(cry?'bottom:'+s.cryBubBottom:'top:'+s.bubTop)+'%">'+(cry?'凹嗚嗚嗚嗚':'！')+'</div></div>';
+    h+='<img class="fr cheerimg'+(first==='cheer'?' on':'')+'" data-f="cheer" src="'+ART[pre+'_'+s.cheerArt]+'" alt="" style="left:'+(ccx-s.cheerW/2)+'%;top:'+s.cheerTop+'%;width:'+s.cheerW+'%">';
+    h+='<img class="fr'+(s.spHop?' cheerimg':'')+'" data-f="sp" src="'+ART[pre+'_'+s.spArt]+'" alt="" style="left:'+(s.cx-s.spW/2)+'%;top:'+s.spTop+'%;width:'+s.spW+'%">';
+    h+='<div class="bub alert'+(o.st==='alert'?' on':'')+'" data-bub="alert" style="left:'+s.bubX+'%;top:'+s.bubTop+'%">！</div>';
+    if(s.spBub)h+='<div class="bub" data-bub="sp" style="left:'+s.cx+'%;bottom:'+s.spBubBottom+'%">'+s.spBub+'</div>';
+    h+='</div>';
   });
-  var c=M.chi,howl=false,stand=!!c&&c.st==='alert';
+  var c=M.chi,alertC=!!c&&c.st==='alert';
   lab.push('吉娃娃人柱力：'+(c?{alert:'有交辦待處理',type:'處理交辦中',cheer:'交辦全部完成',sleep:'目前沒有交辦'}[c.st]:'沒有資料'));
-  h+='<div class="pc" data-sp="chi" data-st="'+(c?c.st:'none')+'" data-mode="'+(howl?'howl':'walk')+'">';
+  h+='<div class="pc" data-sp="chi" data-st="'+(c?c.st:'none')+'" data-mode="walk">';
   ['walk1','walk2','howl1','howl2'].forEach(function(k){
-    var first=howl?'howl1':'walk1';
-    h+='<img class="fr chiimg'+(k===first?' on':'')+'" data-f="'+k+'" src="'+ART['chi_'+k]+'" alt="" style="left:'+OFFICE.x+'%;bottom:'+CHI.BOTTOM+'%;width:'+CHI.W[k]+'%">';
+    h+='<img class="fr chiimg'+(k==='walk1'?' on':'')+'" data-f="'+k+'" src="'+ART['chi_'+k]+'" alt="" style="left:'+OFFICE.x+'%;bottom:'+CHI.BOTTOM+'%;width:'+CHI.W[k]+'%">';
   });
-  h+='<div class="bub chibub'+(c?' on':'')+(stand?' alert':'')+'" data-bub="1" data-open="'+(c?c.open:0)+'" style="left:'+OFFICE.x+'%;bottom:'+CHI.BUB_BOTTOM+'%">'+esc(chiText(c))+'</div></div>';
+  h+='<div class="bub chibub'+(c?' on':'')+(alertC?' alert':'')+'" data-bub="1" data-open="'+(c?c.open:0)+'" style="left:'+OFFICE.x+'%;bottom:'+CHI.BUB_BOTTOM+'%">'+esc(chiText(c))+'</div></div>';
   h+='<div class="plate" style="left:10%">內場主管</div><div class="plate" style="left:60%">外場主管</div>';
   return h.replace('class="office" id="office"','class="office" id="office" role="img" aria-label="'+esc(lab.join('；'))+'"')+'</div>';
 }
@@ -195,25 +199,27 @@ function startOffice(){
       if(cur[id]===key)return;cur[id]=key;
       for(var k in list)list[k].classList[k===key?'add':'remove']('on');
     }
-    var seat={};['neichang','waichang'].forEach(function(sp){if(pcs[sp])seat[sp]={pc:pcs[sp],list:imgs(pcs[sp]),st:pcs[sp].getAttribute('data-st')};});
+    var seat={};['neichang','waichang'].forEach(function(sp){if(pcs[sp])seat[sp]={pc:pcs[sp],list:imgs(pcs[sp]),st:pcs[sp].getAttribute('data-st'),ab:pcs[sp].querySelector('[data-bub="alert"]'),sb:pcs[sp].querySelector('[data-bub="sp"]')};});
     var chi=pcs.chi?{pc:pcs.chi,list:imgs(pcs.chi),st:pcs.chi.getAttribute('data-st'),bub:pcs.chi.querySelector('.chibub')}:null;
+    function show(el,on){if(el&&el.classList.contains('on')!==on)el.classList[on?'add':'remove']('on');}
     function frame(t){
       try{
-        if(OFFICE.t0===null){OFFICE.t0=t;OFFICE.last=t;}
-        var dt=Math.min(t-OFFICE.last,100)/1000;OFFICE.last=t;
+        if(OFFICE.g0===null){OFFICE.g0=t;OFFICE.last=t;}
+        var dt=Math.min(t-OFFICE.last,100)/1000,el=t-OFFICE.g0;OFFICE.last=t;
         ['neichang','waichang'].forEach(function(sp,i){
           var s=seat[sp];if(!s)return;
-          if(s.st==='alert'&&s.list.cry)setFrame(sp,s.pc,s.list,'cry');else if(s.st==='alert'||s.st==='type')setFrame(sp,s.pc,s.list,(Math.floor((t+i*200)/400)%2)?'sitf_type2':'sitf_type1');
+          var spOn=s.st!=='sleep'&&inSpecial(el,SEAT[sp].first),key;
+          if(spOn)key='sp';
+          else if(s.st==='alert'||s.st==='type')key=(Math.floor((t+i*200)/400)%2)?'sitf_type2':'sitf_type1';
+          else key=s.st==='cheer'?'cheer':'sitf_sleep';
+          setFrame(sp,s.pc,s.list,key);
+          show(s.ab,s.st==='alert'&&!spOn);show(s.sb,spOn);
+          var mode=spOn?'sp':'base';if(s.pc.getAttribute('data-mode')!==mode)s.pc.setAttribute('data-mode',mode);
         });
         if(chi){
-          var alert=chi.st==='alert',el=t-OFFICE.t0;
-          if(alert&&OFFICE.howling){OFFICE.howling=false;OFFICE.t0=t;el=0;}
-          if(!alert&&OFFICE.howling&&el>=CHI.HOWL_MS){OFFICE.howling=false;OFFICE.t0=t;el=0;}
-          if(!alert&&!OFFICE.howling&&el>=CHI.WALK_MS){OFFICE.howling=true;OFFICE.t0=t;el=0;}
-          var key,bob=0,txt;
-          if(alert){key='walk1';txt='！';}
-          else if(OFFICE.howling){
-            key=(Math.floor(el/400)%2)?'howl2':'howl1';txt='凹嗚嗚嗚嗚';
+          var alert=chi.st==='alert',howl=inSpecial(el,SPECIAL.CHI_FIRST),key,bob=0,txt;
+          if(howl){
+            key=(Math.floor((el-SPECIAL.CHI_FIRST)/400)%2)?'howl2':'howl1';txt='凹嗚嗚嗚嗚';
           }else{
             OFFICE.x+=OFFICE.dir*CHI.SPEED*dt;
             if(OFFICE.x>CHI.X_MAX){OFFICE.x=CHI.X_MAX;OFFICE.dir=-1;}else if(OFFICE.x<CHI.X_MIN){OFFICE.x=CHI.X_MIN;OFFICE.dir=1;}
@@ -221,9 +227,9 @@ function startOffice(){
           }
           setFrame('chi',chi.pc,chi.list,key);
           for(var k in chi.list){var im=chi.list[k];im.style.left=OFFICE.x+'%';im.style.bottom=(CHI.BOTTOM+bob)+'%';im.classList[OFFICE.dir<0?'add':'remove']('flip');}
-          chi.bub.style.left=OFFICE.x+'%';chi.bub.classList[alert?'add':'remove']('alert');
+          chi.bub.style.left=OFFICE.x+'%';chi.bub.classList[alert&&!howl?'add':'remove']('alert');
           if(chi.bub.getAttribute('data-txt')!==txt){chi.bub.setAttribute('data-txt',txt);chi.bub.textContent=txt;}
-          var mode=OFFICE.howling?'howl':'walk';if(chi.pc.getAttribute('data-mode')!==mode)chi.pc.setAttribute('data-mode',mode);
+          var mode=howl?'howl':'walk';if(chi.pc.getAttribute('data-mode')!==mode)chi.pc.setAttribute('data-mode',mode);
         }
         OFFICE.raf=requestAnimationFrame(frame);
       }catch(e){OFFICE.raf=0;}   // 辦公室動畫壞了就停在那裡，其他內容照常
