@@ -6,6 +6,9 @@
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex,nofollow">
 <title>手在比薩主管專案平台</title>
+<link rel="apple-touch-icon" href="/board/art/icon-180.png">
+<link rel="icon" href="/board/art/icon-180.png">
+<meta name="apple-mobile-web-app-title" content="主管平台">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@400;700&display=swap">
 <style>
 :root{--bg:#11151f;--card:#1a2030;--line:#2c3550;--ink:#e8ecf4;--muted:#8a93a8;--field:#242b3d;--gold:#ffe08a;--green:#4fbf73;--red:#ff7a5c;
@@ -97,6 +100,10 @@ details.done>summary{cursor:pointer;color:var(--muted);margin:6px 2px}
 details.mt>summary{cursor:pointer;color:var(--gold);margin-top:10px}
 .mtext{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.7;margin-top:8px;border-top:1px solid var(--line);padding-top:8px;max-height:65vh;overflow:auto}
 .lnk{color:var(--gold)}
+.ack{display:flex;align-items:center;gap:10px;margin-top:10px;background:#3b3216;border-radius:8px;padding:8px 10px;color:#ffe9a8;font-size:13px}
+.ack button{font-size:16px;padding:8px 18px;flex:none}
+.hint{font-size:13px;color:var(--muted);margin:-4px 2px 0}
+details.others>summary{cursor:pointer;color:var(--gold);margin:6px 2px;font-size:15px}
 #app.busy{pointer-events:none;opacity:.75}
 #toast{position:fixed;left:10px;right:10px;bottom:10px;max-width:740px;margin:0 auto;padding:10px 14px;border-radius:10px;background:#000;color:var(--ink);border:2px solid var(--gold);font-size:14px;display:none;z-index:9}
 #toast.err{border-color:var(--red);color:#ffc9bb;background:#2a1512}
@@ -257,6 +264,8 @@ function clearDrafts(prefix){Object.keys(drafts).forEach(function(k){if(k.indexO
 
 /* ---------- 畫面 ---------- */
 function isBoss(m){return m.me&&m.me.role==='老闆';}
+function isMine(t,m){return !!(m.me&&t.owners.indexOf(m.me.name)>=0);}
+function needAck(t,m){return !t.archived&&t.status!=='完成'&&isMine(t,m)&&!t.replies.some(function(r){return r.who===m.me.name;});}
 
 function taskHtml(t,m){
   var boss=isBoss(m),ro=t.archived;
@@ -270,6 +279,7 @@ function taskHtml(t,m){
   if(ro)h+='<span class="pill">已封存</span>';
   var sc={'進行中':'s2','完成':'s3','卡住':'s4'}[t.status]||'';
   h+='<span class="pill '+sc+'">'+esc(t.status||'（未填）')+'</span></div></div>';
+  if(needAck(t,m))h+='<div class="ack"><button data-act="ack" data-id="'+esc(t.id)+'">收到</button><span>按一下就等於回覆「收到」，頭上的「！」會消失</span></div>';
 
   if(total){
     h+='<div class="seg'+(all?' all':'')+'">';
@@ -394,7 +404,7 @@ function render(m,nocollect){
 
   if(m.state==='ok'){
     var boss=isBoss(m),d=m.data;
-    h+=office(m);
+    if(boss)h+=office(m);
     if(boss&&(m.warnings||[]).length){
       h+='<div class="box warn"><h3>「人員」分頁有問題（只有老闆看得到）</h3><ul>'+
         m.warnings.map(function(w){return '<li>第 '+w.line+' 列：'+esc(w.text)+'</li>';}).join('')+'</ul></div>';
@@ -414,7 +424,19 @@ function render(m,nocollect){
     var list=d.tasks.filter(function(t){return ui.showArchived||!t.archived;});
     var open=list.filter(function(t){return t.status!=='完成';}),fin=list.filter(function(t){return t.status==='完成';});
     if(!list.length)h+='<div class="card"><p class="muted" style="margin:0">還沒有交辦。'+(boss?'按右上角「新增交辦」建立第一筆。':'')+'</p></div>';
-    open.forEach(function(t){h+=taskHtml(t,m);});
+    if(boss){
+      open.forEach(function(t){h+=taskHtml(t,m);});
+    }else{
+      var mine=open.filter(function(t){return isMine(t,m);}),others=open.filter(function(t){return !isMine(t,m);});
+      if(list.length)h+='<p class="hint">你的未完成交辦 '+mine.length+' 件'+(mine.length?'，排在最上面':'')+'</p>';
+      mine.forEach(function(t){h+=taskHtml(t,m);});
+      if(list.length&&!mine.length)h+='<div class="card"><p class="muted" style="margin:0">你目前沒有未完成的交辦。</p></div>';
+      h+=office(m);
+      if(others.length){
+        h+='<details class="others"'+(ui.openOthers?' open':'')+' ontoggle="ui.openOthers=this.open"><summary>其他人的交辦 '+others.length+' 件（點開看）</summary><div style="display:flex;flex-direction:column;gap:12px">'+
+          others.map(function(t){return taskHtml(t,m);}).join('')+'</div></details>';
+      }
+    }
     if(fin.length){
       h+='<details class="done"'+(ui.openDone?' open':'')+' ontoggle="ui.openDone=this.open"><summary>已完成 '+fin.length+' 件</summary><div style="display:flex;flex-direction:column;gap:12px">'+
         fin.map(function(t){return taskHtml(t,m);}).join('')+'</div></details>';
@@ -556,12 +578,15 @@ $('app').addEventListener('click',function(e){
     loadModel(el);
   }else if(act==='tick'){
     var order=parseInt(el.getAttribute('data-order'),10),want=el.getAttribute('data-to')==='1';
+    el.classList[want?'add':'remove']('on');el.textContent=want?'✓':'';
     send('setMilestone',{id:id,order:order,done:want},function(m){
       var t=findTask(m,id);if(!t||!want)return;
       var d=t.ms.filter(function(x){return x.done;}).length;
       ui.pop={id:id,order:order};
       ui.cheer[id]=(d===t.ms.length)?{text:'全部完成！',gold:true}:{text:'又前進一格　'+d+'／'+t.ms.length,gold:false};
     });
+  }else if(act==='ack'){
+    send('addReply',{id:id,text:'收到'});
   }else if(act==='reply'){
     collect();
     var text=(drafts['reply:'+id]||'').trim();
