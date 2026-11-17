@@ -107,11 +107,16 @@ details.others>summary{cursor:pointer;color:var(--gold);margin:6px 2px;font-size
 #app.busy{pointer-events:none;opacity:.75}
 #toast{position:fixed;left:10px;right:10px;bottom:10px;max-width:740px;margin:0 auto;padding:10px 14px;border-radius:10px;background:#000;color:var(--ink);border:2px solid var(--gold);font-size:14px;display:none;z-index:9}
 #toast.err{border-color:var(--red);color:#ffc9bb;background:#2a1512}
+#app.stale{pointer-events:none}
+#app.stale #reload{pointer-events:auto}
+.stalebar{border-color:var(--line)}
+#saving{position:fixed;right:12px;bottom:12px;padding:6px 12px;border-radius:999px;background:#1e3a2a;color:#5fd47f;border:1px solid #5fd47f;font-size:13px;display:none;z-index:8}
 </style>
 </head>
 <body>
 <div class="wrap" id="app"></div>
 <div id="toast"></div>
+<div id="saving"></div>
 <script>
 // 這三行由 build.py 在產生正式版與測試版時填入
 var API_URL = 'https://script.google.com/macros/s/AKfycbwoJADN-Jyqfb9rUXuiutn5Dtc3JCDYJWlhrfDXd8sPycelqK7vsMA9gA63KkO0h478/exec';
@@ -400,6 +405,7 @@ function render(m,nocollect){
   var who=m.state==='ok'?'你好，'+esc(m.me.name)+'（'+esc(m.me.role)+'）':'';
   h+='<div class="top"><div class="title">主管專案平台</div>'+(who?'<div class="who">'+who+'</div>':'')+'</div>';
   if(TEST_MODE)h+='<div class="box warn"><h3>測試版</h3><p>這一頁連到測試用的假資料，不是正式平台。</p></div>';
+  if(ui.stale&&m.state==='ok')h+='<div class="box stalebar"><p class="muted" style="margin:0">'+(ui.staleErr?'連不上平台，下面是上次看到的內容（讀取時間 '+esc(m.readAt)+'）。請按最下面的「重新整理」再試一次。':'下面是上次看到的內容（讀取時間 '+esc(m.readAt)+'），正在讀最新資料，好了就能按。')+'</p></div>';
 
   if(m.state==='ok'){
     var boss=isBoss(m),d=m.data;
@@ -455,6 +461,7 @@ function render(m,nocollect){
 
   if(m.state!=='invalid'&&m.state!=='loading')h+='<div class="foot"><span>'+(m.readAt?'讀取時間 '+esc(m.readAt):'')+'</span><button id="reload" data-act="reload">重新整理</button></div>';
   $('app').innerHTML=h;
+  $('app').classList[ui.stale?'add':'remove']('stale');
   startOffice();
   restore();
   window.scrollTo(0,y);
@@ -487,12 +494,19 @@ function apiPost(fn,p){
   return withTimeout(fetch(API_URL,{method:'POST',credentials:'omit',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({k:KEY,fn:fn,p:p})}),45000).then(parseJson);
 }
 
+var CACHE_KEY='board_cache_v1_'+(TEST_MODE?'test':'main');
+function cacheSave(m){try{if(m&&m.state==='ok')localStorage.setItem(CACHE_KEY,JSON.stringify({k:KEY.slice(-8),m:m}));}catch(e){}}
+function cacheLoad(){try{var c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');if(c&&c.k===KEY.slice(-8)&&c.m&&c.m.state==='ok')return c.m;}catch(e){}return null;}
+function cacheClear(){try{localStorage.removeItem(CACHE_KEY);}catch(e){}}
+
 // 讀取最新資料。還沒成功記過「開啟平台」之前，都帶 log=1；記過以後按「重新整理」就不再記
 function loadModel(btn){
   apiGet(!ui.logged).then(function(m){
-    if(m&&m.state==='ok')ui.logged=true;
+    if(m&&m.state==='ok'){ui.logged=true;cacheSave(m);}else if(m&&m.state==='invalid')cacheClear();
+    ui.stale=false;ui.staleErr=null;LAST=JSON.stringify(m);
     untoast();MODEL=m;render(m);
   }).catch(function(e){
+    if(ui.stale&&MODEL&&MODEL.state==='ok'){ui.staleErr=true;render(MODEL);return;}   // 顯示的是上次的內容：留著，提示連不上
     if(MODEL&&MODEL.state==='ok'){   // 已經有畫面：留著舊畫面，只把按鈕改成「失敗，再按一次」
       if(btn){btn.disabled=false;btn.textContent='重新整理失敗，再按一次';}
       return;
@@ -501,12 +515,53 @@ function loadModel(btn){
   });
 }
 
+var Q=[];        // 排隊等存的動作，一次只送一筆，照按的順序
+var LAST='';     // 最後一次從試算表回來的資料（存檔失敗時退回用）
+function nowStr(){var d=new Date();function z(n){return (n<10?'0':'')+n;}return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());}
+function showSaving(){var e=$('saving');if(Q.length){e.textContent='存檔中…（'+Q.length+'）';e.style.display='block';}else e.style.display='none';}
+function fixUnreplied(t){t.unreplied=!t.archived&&t.status!=='完成'&&t.owners.some(function(o){return !t.replies.some(function(r){return r.who===o;})&&!t.ms.some(function(x){return x.done&&x.by===o;});});}
+function autoStatus(t){var d=t.ms.filter(function(x){return x.done;}).length,all=t.ms.length>0&&d===t.ms.length;
+  if(all)t.status='完成';else if(t.status==='完成')t.status='進行中';else if(t.status==='未開始'&&d>0)t.status='進行中';}
+function quick(fn,payload,apply){
+  if(ui.busy||ui.stale)return;
+  collect();
+  var t=findTask(MODEL,payload.id);if(!t)return;
+  apply(t);fixUnreplied(t);
+  Q.push({fn:fn,p:payload});
+  render(MODEL,true);showSaving();
+  if(Q.length===1)runQ();
+}
+function runQ(){
+  var job=Q[0];
+  apiPost(job.fn,job.p).then(function(res){
+    if(res&&res.ok&&res.model){
+      Q.shift();LAST=JSON.stringify(res.model);
+      if(Q.length){showSaving();runQ();}
+      else{collect();MODEL=res.model;cacheSave(MODEL);render(MODEL,true);showSaving();}
+    }else if(res&&res.invalid){
+      Q=[];showSaving();cacheClear();MODEL={state:'invalid',readAt:''};render(MODEL);
+    }else{
+      qFail('沒有存成功：'+((res&&res.error)||'原因不明'));
+    }
+  }).catch(function(e){qFail('不確定有沒有存成功（'+(e&&e.message?e.message:e)+'）');});
+}
+function qFail(msg){
+  var n=Q.length;Q=[];showSaving();
+  toast(msg+'。畫面已換回試算表裡的樣子'+(n>1?'，後面 '+(n-1)+' 個動作也沒有存，請再按一次':'')+'。',true);
+  if(LAST)MODEL=JSON.parse(LAST);
+  ui.stale=true;ui.staleErr=null;render(MODEL);
+  apiGet(false).then(function(m){if(m&&m.state==='ok'){MODEL=m;LAST=JSON.stringify(m);cacheSave(m);}ui.stale=false;render(MODEL);})
+    .catch(function(){ui.stale=false;render(MODEL);});
+}
+window.addEventListener('beforeunload',function(e){if(Q.length){e.preventDefault();e.returnValue='';}});
+
 function send(fn,payload,onOk){
+  if(Q.length){toast('還在存檔，等右下角「存檔中」消失再送。',false);return;}
   ui.busy=true;ui.cheer={};$('app').classList.add('busy');toast('送出中…',false);
   apiPost(fn,payload).then(function(res){
     ui.busy=false;$('app').classList.remove('busy');untoast();
     if(res&&res.ok&&res.model){
-      collect();MODEL=res.model;if(onOk)onOk(res.model);render(res.model,true);   // 先收一次畫面上的字，再由 onOk 決定哪些要清掉，不讓舊字又被收回來
+      collect();MODEL=res.model;LAST=JSON.stringify(res.model);cacheSave(MODEL);if(onOk)onOk(res.model);render(res.model,true);   // 先收一次畫面上的字，再由 onOk 決定哪些要清掉，不讓舊字又被收回來
     }else if(res&&res.invalid){
       MODEL={state:'invalid',readAt:''};render(MODEL);
     }else{
@@ -572,25 +627,28 @@ $('app').addEventListener('click',function(e){
   if(!el||ui.busy)return;
   var act=el.getAttribute('data-act'),id=el.getAttribute('data-id');
   if(act!=='archive'&&ui.armed){ui.armed=null;}
+  if(act==='reload'&&Q.length){toast('還在存檔，等右下角「存檔中」消失再重新整理。',false);return;}
   if(act==='reload'){
     el.disabled=true;el.textContent='讀取中…';
     loadModel(el);
   }else if(act==='tick'){
     var order=parseInt(el.getAttribute('data-order'),10),want=el.getAttribute('data-to')==='1';
     el.classList[want?'add':'remove']('on');el.textContent=want?'✓':'';
-    send('setMilestone',{id:id,order:order,done:want},function(m){
-      var t=findTask(m,id);if(!t||!want)return;
+    quick('setMilestone',{id:id,order:order,done:want},function(t){
+      t.ms.forEach(function(x){if(x.order===order){x.done=want;x.by=want?MODEL.me.name:'';x.at=want?nowStr():'';}});
+      autoStatus(t);
+      if(!want)return;
       var d=t.ms.filter(function(x){return x.done;}).length;
       ui.pop={id:id,order:order};
       ui.cheer[id]=(d===t.ms.length)?{text:'全部完成！',gold:true}:{text:'又前進一格　'+d+'／'+t.ms.length,gold:false};
     });
   }else if(act==='ack'){
-    send('addReply',{id:id,text:'收到'});
+    quick('addReply',{id:id,text:'收到'},function(t){t.replies.push({who:MODEL.me.name,time:nowStr(),text:'收到'});});
   }else if(act==='reply'){
     collect();
     var text=(drafts['reply:'+id]||'').trim();
     if(!text){toast('回覆是空的',true);return;}
-    send('addReply',{id:id,text:text},function(){delete drafts['reply:'+id];});
+    quick('addReply',{id:id,text:text},function(t){delete drafts['reply:'+id];t.replies.push({who:MODEL.me.name,time:nowStr(),text:text});});
   }else if(act==='archive'){
     var toArch=el.getAttribute('data-to')==='1';
     if(toArch&&ui.armed!==id){ui.armed=id;render(MODEL);return;}   // 第一次按只是確認，再按一次才封存
@@ -609,12 +667,13 @@ $('app').addEventListener('change',function(e){
   var el=e.target,act=el.getAttribute?el.getAttribute('data-act'):null;
   if(act==='status'){
     if(ui.busy)return;
-    send('setStatus',{id:el.getAttribute('data-id'),status:el.value});
+    var sid=el.getAttribute('data-id'),sv=el.value;
+    quick('setStatus',{id:sid,status:sv},function(t){var was=t.status;t.status=sv;if(!isBoss(MODEL)&&was!==sv)t.replies.push({who:MODEL.me.name,time:nowStr(),text:'（狀態改為：'+sv+'）'});});
   }else if(act==='show-archived'){ui.showArchived=el.checked;render(MODEL);}
 });
 
 if(!keyShapeOk(KEY)){MODEL={state:'invalid',readAt:''};render(MODEL);}   // 暗碼空白或格式不對：不用問伺服器
-else{render(MODEL);loadModel(null);}
+else{var cached=cacheLoad();if(cached){MODEL=cached;ui.stale=true;LAST=JSON.stringify(cached);}render(MODEL);loadModel(null);}
 </script>
 </body>
 </html>
