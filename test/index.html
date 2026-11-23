@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex,nofollow">
 <title>手在比薩主管專案平台</title>
@@ -11,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="主管平台">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@400;700&display=swap">
 <style>
-:root{--bg:#11151f;--card:#1a2030;--line:#2c3550;--ink:#e8ecf4;--muted:#8a93a8;--field:#242b3d;--gold:#ffe08a;--green:#4fbf73;--red:#ff7a5c;
+:root{color-scheme:dark;--bg:#11151f;--card:#1a2030;--line:#2c3550;--ink:#e8ecf4;--muted:#8a93a8;--field:#242b3d;--gold:#ffe08a;--green:#4fbf73;--red:#ff7a5c;
 --f-pixel:"DotGothic16","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;--f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 var(--f-body)}
@@ -51,9 +52,9 @@ button.sm{font-size:13px;padding:4px 10px}
 button:disabled{opacity:.5;cursor:default}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
 .card.gone{opacity:.7}
-.head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:flex-start}.head>div:first-child{min-width:0;flex:1 1 160px}
 .who2{color:var(--muted);font-size:12px;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
-.own{font-size:14px;font-weight:700;padding:1px 9px;border-radius:999px;white-space:nowrap;background:#3a4258;color:var(--ink)}
+.own{font-size:14px;font-weight:700;padding:1px 9px;border-radius:999px;max-width:100%;overflow-wrap:anywhere;background:#3a4258;color:var(--ink)}
 .own.r-in{background:#ffa552;color:#2a1400}.own.r-out{background:#6fb0ff;color:#06182e}.own.r-mk{background:#c39bff;color:#1d0b3a}
 .ttl{font-weight:700;font-size:18px;margin-top:2px;overflow-wrap:anywhere}
 .tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
@@ -105,7 +106,7 @@ details.mt>summary{cursor:pointer;color:var(--gold);margin-top:10px}
 .ack{display:flex;align-items:center;gap:10px;margin-top:10px;background:#3b3216;border-radius:8px;padding:8px 10px;color:#ffe9a8;font-size:13px}
 .ack button{font-size:16px;padding:8px 18px;flex:none}
 .hint{font-size:13px;color:var(--muted);margin:-4px 2px 0}
-.frow{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:15px}.frow:first-child{border-top:0}.frow .muted{font-size:13px}
+.frow{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:15px}.frow:first-child{border-top:0}.frow .muted{font-size:13px}.frow .lnk{display:inline-block;padding:8px 0}
 .prog{padding:12px 14px}.prog h3{margin:0 0 6px;font-size:15px;color:var(--gold);font-weight:700}
 .prow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
 .prow:first-of-type{border-top:0}.prow .pn{min-width:0}.prow .muted{font-size:13px}
@@ -383,7 +384,7 @@ function progHtml(m){
     ts.forEach(function(t){tot+=t.ms.length;dn+=t.ms.filter(function(x){return x.done;}).length;if(t.overdue)od++;else if(t.due&&(!near||t.due<near))near=t.due;});
     h+='<div class="prow"><span class="own '+OWN_CLS[p.role]+'">'+esc(p.name)+'</span>';
     if(!ts.length){h+='<span class="muted">沒有未完成的交辦</span></div>';return;}
-    h+='<span class="pn">'+ts.length+' 件進行中</span><span class="muted">關卡 '+dn+'／'+tot+'</span>';
+    h+='<span class="pn">'+ts.length+' 件未完成</span><span class="muted">關卡 '+dn+'／'+tot+'</span>';
     if(od)h+='<span class="pill red">逾期 '+od+' 件</span>';
     if(near){var n=daysBetween(d.today,near);h+='<span class="muted">最近期限 '+fmtD(near)+(n===null?'':n<0?'（已過期）':n===0?'（今天）':'（剩 '+n+' 天）')+'</span>';}
     h+='</div>';
@@ -410,19 +411,19 @@ function evHtml(m){
 }
 
 /* 最下面的資料夾連結（Maurice 2026-11-23）：網址存在試算表「設定」，由 Apps Script 只回給有專屬連結的人，網頁裡不寫網址 */
-var FOLDER_NOTE={'會議議程資料夾':'下次會議的議程，會前在這裡寫補充','操作手冊資料夾':'主管任務手冊、LINE 官方帳號說明'};
+var FOLDER_NOTE={'會議議程資料夾':'下次會議的議程；要編輯請用 Safari 或雲端硬碟 App 打開','操作手冊資料夾':'主管任務手冊、LINE 官方帳號說明'};
 function foldersHtml(m){
-  var fs=(Array.isArray(m.data.folders)?m.data.folders:[]).filter(function(f){return f&&typeof f.url==='string'&&f.url.indexOf('https://drive.google.com/')===0;});
+  var fs=(Array.isArray(m.data.folders)?m.data.folders:[]).filter(function(f){return f&&typeof f.url==='string'&&/^https:\/\/drive\.google\.com\/\S+$/.test(f.url);});
   if(!fs.length)return '';
   return '<div class="sechead"><h2>資料夾</h2></div><div class="card">'+fs.map(function(f){
-    return '<div class="frow"><a class="lnk" href="'+esc(f.url)+'" target="_blank" rel="noopener">'+esc(f.name)+'</a><span class="muted">'+esc(FOLDER_NOTE[f.name]||'')+'</span></div>';}).join('')+'</div>';
+    return '<div class="frow"><a class="lnk" href="'+esc(f.url)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name)+'</a><span class="muted">'+esc(FOLDER_NOTE[f.name]||'')+'</span></div>';}).join('')+'</div>';
 }
 function meetingHtml(m){
   var mt=m.data.meeting,h='<div class="sechead"><h2>最新主管會議記錄</h2></div>';
   if(mt.state==='ok'){
     h+='<div class="card"><div class="ttl">'+esc(mt.title)+'</div>'+
        '<div class="cap">會議日期 <b>'+fmtDW(mt.date)+'</b>　這裡是複製過來的內容，原文件有改的話以原文件為準。'+
-       (mt.url?'　<a class="lnk" href="'+esc(mt.url)+'" target="_blank" rel="noopener">開啟原文件</a>':'')+'</div>'+
+       (mt.url?'　<a class="lnk" href="'+esc(mt.url)+'" target="_blank" rel="noopener noreferrer">開啟原文件</a>':'')+'</div>'+
        '<details class="mt"'+(ui.openMeet?' open':'')+' ontoggle="ui.openMeet=this.open"><summary>展開全文</summary><div class="mtext">'+esc(mt.text)+'</div></details></div>';
   }else if(mt.state==='bad'){
     h+='<div class="box warn"><h3>會議記錄的資料有問題，所以沒有顯示</h3><p>'+(isBoss(m)?'請看上方黃色提示寫的是「設定」分頁第幾列。':'請告訴 Maurice。')+'</p></div>';
@@ -532,7 +533,7 @@ function apiPost(fn,p){
 }
 
 var CACHE_KEY='board_cache_v1_'+(TEST_MODE?'test':'main');
-function cacheSave(m){try{if(m&&m.state==='ok')localStorage.setItem(CACHE_KEY,JSON.stringify({k:KEY.slice(-8),m:m}));}catch(e){}}
+function cacheSave(m){try{if(m&&m.state==='ok'){var c=JSON.parse(JSON.stringify(m));if(c.data)c.data.folders=[];localStorage.setItem(CACHE_KEY,JSON.stringify({k:KEY.slice(-8),m:c}));}}catch(e){}}   // 資料夾網址不存進手機
 function cacheLoad(){try{var c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');if(c&&c.k===KEY.slice(-8)&&c.m&&c.m.state==='ok')return c.m;}catch(e){}return null;}
 function cacheClear(){try{localStorage.removeItem(CACHE_KEY);}catch(e){}}
 
@@ -564,6 +565,7 @@ function quick(fn,payload,apply){
   collect();
   var t=findTask(MODEL,payload.id);if(!t)return;
   apply(t);fixUnreplied(t);
+  t.overdue=!!(t.due&&MODEL.data&&MODEL.data.today>t.due&&t.status!=='完成');   // 和伺服器同一條規則，存檔中那幾秒也不會算錯逾期
   Q.push({fn:fn,p:payload});
   render(MODEL,true);showSaving();
   if(Q.length===1)runQ();
@@ -600,7 +602,7 @@ function send(fn,payload,onOk){
     if(res&&res.ok&&res.model){
       collect();MODEL=res.model;LAST=JSON.stringify(res.model);cacheSave(MODEL);if(onOk)onOk(res.model);render(res.model,true);   // 先收一次畫面上的字，再由 onOk 決定哪些要清掉，不讓舊字又被收回來
     }else if(res&&res.invalid){
-      MODEL={state:'invalid',readAt:''};render(MODEL);
+      cacheClear();MODEL={state:'invalid',readAt:''};render(MODEL);
     }else{
       toast('沒有送出成功：'+((res&&res.error)||'原因不明')+'。請按「重新整理」確認有沒有存進去，再決定要不要重送。',true);
       render(MODEL);
