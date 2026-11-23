@@ -166,12 +166,12 @@ function renderLoading() {
 function fetchModel() {
   var url = API_URL + String.fromCharCode(63) + 'format=json&t=' + Date.now();
   var timer;
-  var timeout = new Promise(function (_, reject) { timer = setTimeout(function () { reject(new Error('等太久沒有回應')); }, 30000); });
+  var timeout = new Promise(function (_, reject) { timer = setTimeout(function () { var x = new Error('等太久沒有回應'); x.zh = true; reject(x); }, 30000); });
   var req = fetch(url, {credentials: 'omit', cache: 'no-store'}).then(function (r) {
-    if (!r.ok) throw new Error('Google 回應錯誤 ' + r.status);
-    return r.json();
+    if (!r.ok) { var x = new Error('Google 回應錯誤 ' + r.status); x.zh = true; throw x; }
+    return r.json().catch(function () { var x = new Error('收到的資料格式不對'); x.zh = true; throw x; });
   }).then(function (m) {
-    if (!m || typeof m.ok !== 'boolean') throw new Error('收到的資料格式不對');
+    if (!m || typeof m.ok !== 'boolean') { var x = new Error('收到的資料格式不對'); x.zh = true; throw x; }
     return m;
   });
   return Promise.race([req, timeout]).finally(function () { clearTimeout(timer); });
@@ -184,7 +184,7 @@ function load(btn) {
       document.getElementById('foot').textContent = '重新整理失敗，請稍後再按一次';
     } else {
       render({ok: false, dateText: localDateText(), readAt: '--:--',
-        message: '連不上資料（' + (e && e.message ? e.message : '網路或 Google 沒回應') + '），請稍後按「重新整理」',
+        message: '連不上資料（' + (e && e.zh ? e.message : '網路或 Google 沒回應') + '），請稍後按「重新整理」',
         warnings: [], todayItems: [], deadlines: [], cloth: [], pose: 'stand',
         boardLine1: '讀不到資料', boardLine2: '請看白板', clothChip: '口布本週：讀不到'});
     }
@@ -193,7 +193,7 @@ function load(btn) {
 }
 document.getElementById('testbar').hidden = !TEST_MODE;
 renderLoading();
-load(null);
+load(document.getElementById('reload'));
 
 // 長毛吉娃娃：只走地板，每 10 秒停下來嚎叫 2.5 秒。出任何錯都只停掉吉娃娃，不影響上面的畫面。
 function startChi() {
