@@ -184,10 +184,13 @@ function taipeiTime() {
   var d = new Date(Date.now() + 8 * 3600000);
   return ('0' + d.getUTCHours()).slice(-2) + ':' + ('0' + d.getUTCMinutes()).slice(-2);
 }
+var LOAD_SEQ = 0; // 每讀一次加 1；晚回來的舊結果直接丟掉
 function load(btn, byUser) {
+  var mine = ++LOAD_SEQ;
   if (btn) { btn.disabled = true; btn.textContent = '讀取中…'; }
   function done() { if (btn) { btn.disabled = false; btn.textContent = '重新整理'; } }
-  return fetchModel().then(function (m) { MODEL = m; render(m); done(); }, function (e) {
+  return fetchModel().then(function (m) { if (mine !== LOAD_SEQ) return; MODEL = m; render(m); done(); }, function (e) {
+    if (mine !== LOAD_SEQ) return;
     if (MODEL && MODEL.ok) {
       document.getElementById('foot').textContent = '重新整理失敗，請稍後再按一次';
     } else {
