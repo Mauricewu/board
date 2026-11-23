@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
 <title>手在比薩員工資訊</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@400;700&display=swap">
 <style>
@@ -166,8 +167,11 @@ function renderLoading() {
 function fetchModel() {
   var url = API_URL + String.fromCharCode(63) + 'format=json&t=' + Date.now();
   var timer;
-  var timeout = new Promise(function (_, reject) { timer = setTimeout(function () { var x = new Error('等太久沒有回應'); x.zh = true; reject(x); }, 30000); });
-  var req = fetch(url, {credentials: 'omit', cache: 'no-store'}).then(function (r) {
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var timeout = new Promise(function (_, reject) { timer = setTimeout(function () { if (ctrl) ctrl.abort(); var x = new Error('等太久沒有回應'); x.zh = true; reject(x); }, 15000); });
+  var opts = {credentials: 'omit', cache: 'no-store'};
+  if (ctrl) opts.signal = ctrl.signal;
+  var req = fetch(url, opts).then(function (r) {
     if (!r.ok) { var x = new Error('Google 回應錯誤 ' + r.status); x.zh = true; throw x; }
     return r.json().catch(function () { var x = new Error('收到的資料格式不對'); x.zh = true; throw x; });
   }).then(function (m) {
@@ -176,24 +180,32 @@ function fetchModel() {
   });
   return Promise.race([req, timeout]).finally(function () { clearTimeout(timer); });
 }
-function load(btn) {
+function taipeiTime() {
+  var d = new Date(Date.now() + 8 * 3600000);
+  return ('0' + d.getUTCHours()).slice(-2) + ':' + ('0' + d.getUTCMinutes()).slice(-2);
+}
+function load(btn, byUser) {
   if (btn) { btn.disabled = true; btn.textContent = '讀取中…'; }
   function done() { if (btn) { btn.disabled = false; btn.textContent = '重新整理'; } }
   return fetchModel().then(function (m) { MODEL = m; render(m); done(); }, function (e) {
-    if (MODEL) {
+    if (MODEL && MODEL.ok) {
       document.getElementById('foot').textContent = '重新整理失敗，請稍後再按一次';
     } else {
+      MODEL = null;
       render({ok: false, dateText: localDateText(), readAt: '--:--',
         message: '連不上資料（' + (e && e.zh ? e.message : '網路或 Google 沒回應') + '），請稍後按「重新整理」',
         warnings: [], todayItems: [], deadlines: [], cloth: [], pose: 'stand',
         boardLine1: '讀不到資料', boardLine2: '請看白板', clothChip: '口布本週：讀不到'});
+      if (byUser) document.getElementById('foot').textContent = '重新整理失敗（' + taipeiTime() + '），請稍後再按一次';
     }
     done();
   });
 }
 document.getElementById('testbar').hidden = !TEST_MODE;
 renderLoading();
-load(document.getElementById('reload'));
+load(document.getElementById('reload'), false);
+// 從別頁按返回時，Safari 會直接拿出舊畫面，這時重新讀一次
+window.addEventListener('pageshow', function (ev) { if (ev.persisted) load(document.getElementById('reload'), false); });
 
 // 長毛吉娃娃：只走地板，每 10 秒停下來嚎叫 2.5 秒。出任何錯都只停掉吉娃娃，不影響上面的畫面。
 function startChi() {
@@ -229,10 +241,12 @@ function startChi() {
     requestAnimationFrame(frame);
   } catch (e) { /* 吉娃娃壞了不影響其他內容 */ }
 }
+// 先把吉娃娃 4 張圖載好，換動作時才不會閃
+var CHI_PRELOAD = ['chi_walk1', 'chi_walk2', 'chi_howl1', 'chi_howl2'].map(function (k) { var im = new Image(); im.src = ART[k]; return im; });
 startChi();
 
 document.getElementById('reload').addEventListener('click', function () {
-  load(this);
+  load(this, true);
 });
 </script>
 </body>
