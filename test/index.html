@@ -409,12 +409,13 @@ function evHtml(m){
   return h;
 }
 
-/* 最下面的資料夾連結（Maurice 2026-11-23 選 A：會議議程＋給主管看；兩個都是知道連結就能看） */
-var FOLDERS=[{name:'會議議程資料夾',note:'下次會議的議程，會前在這裡寫補充',url:'https://drive.google.com/drive/folders/12hEr2Is-Kv7TzIwlutGJrvkUJs7WSOrN'},
-  {name:'操作手冊資料夾',note:'主管任務手冊、LINE 官方帳號說明',url:'https://drive.google.com/drive/folders/12SCBFP48oYdQIPl91j3dWJHz9aDU_eDp'}];
-function foldersHtml(){
-  return '<div class="sechead"><h2>資料夾</h2></div><div class="card">'+FOLDERS.map(function(f){
-    return '<div class="frow"><a class="lnk" href="'+esc(f.url)+'" target="_blank" rel="noopener">'+esc(f.name)+'</a><span class="muted">'+esc(f.note)+'</span></div>';}).join('')+'</div>';
+/* 最下面的資料夾連結（Maurice 2026-11-23）：網址存在試算表「設定」，由 Apps Script 只回給有專屬連結的人，網頁裡不寫網址 */
+var FOLDER_NOTE={'會議議程資料夾':'下次會議的議程，會前在這裡寫補充','操作手冊資料夾':'主管任務手冊、LINE 官方帳號說明'};
+function foldersHtml(m){
+  var fs=(m.data.folders||[]).filter(function(f){return f&&typeof f.url==='string'&&f.url.indexOf('https://drive.google.com/')===0;});
+  if(!fs.length)return '';
+  return '<div class="sechead"><h2>資料夾</h2></div><div class="card">'+fs.map(function(f){
+    return '<div class="frow"><a class="lnk" href="'+esc(f.url)+'" target="_blank" rel="noopener">'+esc(f.name)+'</a><span class="muted">'+esc(FOLDER_NOTE[f.name]||'')+'</span></div>';}).join('')+'</div>';
 }
 function meetingHtml(m){
   var mt=m.data.meeting,h='<div class="sechead"><h2>最新主管會議記錄</h2></div>';
@@ -483,7 +484,7 @@ function render(m,nocollect){
     }
     h+=evHtml(m);
     h+=meetingHtml(m);
-    h+=foldersHtml();
+    h+=foldersHtml(m);
   } else if(m.state==='invalid'){
     h+='<div class="box err"><h3>連結無效，請向 Maurice 索取</h3></div>';
   } else if(m.state==='loading'){
