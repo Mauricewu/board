@@ -105,6 +105,7 @@ details.mt>summary{cursor:pointer;color:var(--gold);margin-top:10px}
 .ack{display:flex;align-items:center;gap:10px;margin-top:10px;background:#3b3216;border-radius:8px;padding:8px 10px;color:#ffe9a8;font-size:13px}
 .ack button{font-size:16px;padding:8px 18px;flex:none}
 .hint{font-size:13px;color:var(--muted);margin:-4px 2px 0}
+.frow{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:15px}.frow:first-child{border-top:0}.frow .muted{font-size:13px}
 .prog{padding:12px 14px}.prog h3{margin:0 0 6px;font-size:15px;color:var(--gold);font-weight:700}
 .prow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
 .prow:first-of-type{border-top:0}.prow .pn{min-width:0}.prow .muted{font-size:13px}
@@ -408,6 +409,13 @@ function evHtml(m){
   return h;
 }
 
+/* 最下面的資料夾連結（Maurice 2026-11-23 選 A：會議議程＋給主管看；兩個都是知道連結就能看） */
+var FOLDERS=[{name:'會議議程資料夾',note:'下次會議的議程，會前在這裡寫補充',url:'https://drive.google.com/drive/folders/12hEr2Is-Kv7TzIwlutGJrvkUJs7WSOrN'},
+  {name:'操作手冊資料夾',note:'主管任務手冊、LINE 官方帳號說明',url:'https://drive.google.com/drive/folders/12SCBFP48oYdQIPl91j3dWJHz9aDU_eDp'}];
+function foldersHtml(){
+  return '<div class="sechead"><h2>資料夾</h2></div><div class="card">'+FOLDERS.map(function(f){
+    return '<div class="frow"><a class="lnk" href="'+esc(f.url)+'" target="_blank" rel="noopener">'+esc(f.name)+'</a><span class="muted">'+esc(f.note)+'</span></div>';}).join('')+'</div>';
+}
 function meetingHtml(m){
   var mt=m.data.meeting,h='<div class="sechead"><h2>最新主管會議記錄</h2></div>';
   if(mt.state==='ok'){
@@ -475,6 +483,7 @@ function render(m,nocollect){
     }
     h+=evHtml(m);
     h+=meetingHtml(m);
+    h+=foldersHtml();
   } else if(m.state==='invalid'){
     h+='<div class="box err"><h3>連結無效，請向 Maurice 索取</h3></div>';
   } else if(m.state==='loading'){
