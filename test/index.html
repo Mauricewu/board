@@ -385,7 +385,7 @@ function progHtml(m){
     if(!ts.length){h+='<span class="muted">沒有未完成的交辦</span></div>';return;}
     h+='<span class="pn">'+ts.length+' 件進行中</span><span class="muted">關卡 '+dn+'／'+tot+'</span>';
     if(od)h+='<span class="pill red">逾期 '+od+' 件</span>';
-    if(near){var n=daysBetween(d.today,near);h+='<span class="muted">最近期限 '+fmtD(near)+(n===null?'':n===0?'（今天）':'（剩 '+n+' 天）')+'</span>';}
+    if(near){var n=daysBetween(d.today,near);h+='<span class="muted">最近期限 '+fmtD(near)+(n===null?'':n<0?'（已過期）':n===0?'（今天）':'（剩 '+n+' 天）')+'</span>';}
     h+='</div>';
   });
   return h+'</div>';
