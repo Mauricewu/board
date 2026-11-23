@@ -52,7 +52,9 @@ button:disabled{opacity:.5;cursor:default}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
 .card.gone{opacity:.7}
 .head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
-.who2{color:var(--muted);font-size:12px}
+.who2{color:var(--muted);font-size:12px;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
+.own{font-size:14px;font-weight:700;padding:1px 9px;border-radius:999px;white-space:nowrap;background:#3a4258;color:var(--ink)}
+.own.r-in{background:#ffa552;color:#2a1400}.own.r-out{background:#6fb0ff;color:#06182e}.own.r-mk{background:#c39bff;color:#1d0b3a}
 .ttl{font-weight:700;font-size:18px;margin-top:2px;overflow-wrap:anywhere}
 .tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
 .pill{font-size:13px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap;background:#2a2f3f;color:#b8bfd0}
@@ -272,12 +274,14 @@ function isBoss(m){return m.me&&m.me.role==='老闆';}
 function isMine(t,m){return !!(m.me&&t.owners.indexOf(m.me.name)>=0);}
 function needAck(t,m){return !t.archived&&t.status!=='完成'&&isMine(t,m)&&!t.replies.some(function(r){return r.who===m.me.name;})&&!t.ms.some(function(x){return x.done&&x.by===m.me.name;});}
 
+var OWN_CLS={'內場主管':'r-in','外場主管':'r-out','行銷':'r-mk'};
+function ownersHtml(t,m){return t.owners.map(function(n){var r='';(m.people||[]).forEach(function(p){if(p.name===n)r=OWN_CLS[p.role]||'';});return '<span class="own'+(r?' '+r:'')+'">'+esc(n)+'</span>';}).join('');}
 function taskHtml(t,m){
   var boss=isBoss(m),ro=t.archived,can=boss||isMine(t,m);   // can：能勾里程碑、改狀態（負責人與老闆）
   var total=t.ms.length,done=t.ms.filter(function(x){return x.done;}).length,all=total>0&&done===total;
   var next=null;t.ms.forEach(function(x){if(!next&&!x.done)next=x;});
   var h='<div class="card'+(ro?' gone':'')+'" data-card="'+esc(t.id)+'">';
-  h+='<div class="head"><div><div class="who2">'+esc(t.owners.join('、'))+'　'+(t.start?fmtD(t.start):'')+(t.due?' ～ '+fmtD(t.due):'')+'</div>'+
+  h+='<div class="head"><div><div class="who2">'+ownersHtml(t,m)+'<span>'+(t.start?fmtD(t.start):'')+(t.due?' ～ '+fmtD(t.due):'')+'</span></div>'+
      '<div class="ttl">'+esc(t.id)+'　'+esc(t.title)+'</div></div><div class="tags">';
   if(t.overdue)h+='<span class="pill red">逾期</span>';
   if(t.unreplied)h+='<span class="pill yel">未回覆</span>';
