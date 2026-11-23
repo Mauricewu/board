@@ -412,7 +412,7 @@ function evHtml(m){
 /* 最下面的資料夾連結（Maurice 2026-11-23）：網址存在試算表「設定」，由 Apps Script 只回給有專屬連結的人，網頁裡不寫網址 */
 var FOLDER_NOTE={'會議議程資料夾':'下次會議的議程，會前在這裡寫補充','操作手冊資料夾':'主管任務手冊、LINE 官方帳號說明'};
 function foldersHtml(m){
-  var fs=(m.data.folders||[]).filter(function(f){return f&&typeof f.url==='string'&&f.url.indexOf('https://drive.google.com/')===0;});
+  var fs=(Array.isArray(m.data.folders)?m.data.folders:[]).filter(function(f){return f&&typeof f.url==='string'&&f.url.indexOf('https://drive.google.com/')===0;});
   if(!fs.length)return '';
   return '<div class="sechead"><h2>資料夾</h2></div><div class="card">'+fs.map(function(f){
     return '<div class="frow"><a class="lnk" href="'+esc(f.url)+'" target="_blank" rel="noopener">'+esc(f.name)+'</a><span class="muted">'+esc(FOLDER_NOTE[f.name]||'')+'</span></div>';}).join('')+'</div>';
