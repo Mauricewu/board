@@ -105,6 +105,9 @@ details.mt>summary{cursor:pointer;color:var(--gold);margin-top:10px}
 .ack{display:flex;align-items:center;gap:10px;margin-top:10px;background:#3b3216;border-radius:8px;padding:8px 10px;color:#ffe9a8;font-size:13px}
 .ack button{font-size:16px;padding:8px 18px;flex:none}
 .hint{font-size:13px;color:var(--muted);margin:-4px 2px 0}
+.prog{padding:12px 14px}.prog h3{margin:0 0 6px;font-size:15px;color:var(--gold);font-weight:700}
+.prow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.prow:first-of-type{border-top:0}.prow .pn{min-width:0}.prow .muted{font-size:13px}
 details.others>summary{cursor:pointer;color:var(--gold);margin:6px 2px;font-size:15px}
 #app.busy{pointer-events:none;opacity:.75}
 #toast{position:fixed;left:10px;right:10px;bottom:10px;max-width:740px;margin:0 auto;padding:10px 14px;border-radius:10px;background:#000;color:var(--ink);border:2px solid var(--gold);font-size:14px;display:none;z-index:9}
@@ -367,6 +370,25 @@ function evFormHtml(){
   return h;
 }
 
+/* 大家的進度：每位內場主管、外場主管、行銷一行（不含老闆、不含封存與已完成） */
+function daysBetween(a,b){var x=/^(\d{4})-(\d{2})-(\d{2})$/.exec(a||''),y=/^(\d{4})-(\d{2})-(\d{2})$/.exec(b||'');if(!x||!y)return null;return Math.round((Date.UTC(+y[1],+y[2]-1,+y[3])-Date.UTC(+x[1],+x[2]-1,+x[3]))/86400000);}
+function progHtml(m){
+  var d=m.data,ps=(m.people||[]).filter(function(p){return OWN_CLS[p.role];});
+  if(!ps.length)return '';
+  var h='<div class="card prog"><h3>大家的進度</h3>';
+  ps.forEach(function(p){
+    var ts=d.tasks.filter(function(t){return !t.archived&&t.status!=='完成'&&t.owners.indexOf(p.name)>=0;});
+    var tot=0,dn=0,od=0,near='';
+    ts.forEach(function(t){tot+=t.ms.length;dn+=t.ms.filter(function(x){return x.done;}).length;if(t.overdue)od++;else if(t.due&&(!near||t.due<near))near=t.due;});
+    h+='<div class="prow"><span class="own '+OWN_CLS[p.role]+'">'+esc(p.name)+'</span>';
+    if(!ts.length){h+='<span class="muted">沒有未完成的交辦</span></div>';return;}
+    h+='<span class="pn">'+ts.length+' 件進行中</span><span class="muted">關卡 '+dn+'／'+tot+'</span>';
+    if(od)h+='<span class="pill red">逾期 '+od+' 件</span>';
+    if(near){var n=daysBetween(d.today,near);h+='<span class="muted">最近期限 '+fmtD(near)+(n===null?'':n===0?'（今天）':'（剩 '+n+' 天）')+'</span>';}
+    h+='</div>';
+  });
+  return h+'</div>';
+}
 function evHtml(m){
   var d=m.data,h='<div class="sechead"><h2>店內行事曆</h2><div><button data-act="ev-new">＋ 新增行事曆</button></div></div>';
   if(ui.evForm)h+=evFormHtml();
@@ -432,6 +454,7 @@ function render(m,nocollect){
     if(boss)h+=formHtml(m);
     var list=d.tasks.filter(function(t){return ui.showArchived||!t.archived;});
     var open=list.filter(function(t){return t.status!=='完成';}),fin=list.filter(function(t){return t.status==='完成';});
+    h+=progHtml(m);
     if(!list.length)h+='<div class="card"><p class="muted" style="margin:0">還沒有交辦。'+(boss?'按右上角「新增交辦」建立第一筆。':'')+'</p></div>';
     if(boss){
       open.forEach(function(t){h+=taskHtml(t,m);});
