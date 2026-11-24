@@ -11,10 +11,9 @@
 --f-pixel:"DotGothic16","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;--f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body)}
-.wrap{max-width:720px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.wrap{max-width:960px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:14px}
 .top{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;background:#2a2118;color:#f3e6c8;border-radius:8px;padding:10px 14px}
 .top .date{font-family:var(--f-pixel);font-size:22px;letter-spacing:.04em}
-.top .cloth{font-family:var(--f-pixel);font-size:17px;background:#f3e6c8;color:#2a2118;padding:2px 10px;border-radius:3px}
 .banner{position:relative;width:100%;aspect-ratio:1024/338;border-radius:6px;overflow:hidden;background:#222;border:3px solid #2a2118}
 .banner>img.bg{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;display:block}
 .board{position:absolute;left:52.6%;top:18%;width:23.4%;height:43%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--f-pixel);color:#2a1a0c;text-align:center;line-height:1.25;padding:4px}
@@ -26,6 +25,10 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body)}
 .bubble{position:absolute;transform:translateX(-50%);z-index:3;background:#fffdf8;border:2px solid #2a1a0c;padding:2px 8px;font-family:var(--f-pixel);font-size:clamp(9px,2.2vw,15px);color:#2a1a0c;white-space:nowrap;pointer-events:none}
 .bubble::after{content:"";position:absolute;left:50%;top:100%;margin-left:-4px;border:4px solid transparent;border-top-color:#2a1a0c}
 .cards{display:flex;flex-direction:column;gap:14px}
+.days{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+.card.tmr{border-style:dashed;background:#fbf7ef;box-shadow:none}
+.links{display:flex;flex-wrap:wrap;gap:12px}
+.links a{flex:1 1 0;min-width:140px;display:block;text-align:center;font-family:var(--f-pixel);font-size:18px;color:var(--ink);text-decoration:none;background:var(--amber-soft);border:2px solid #2a2118;border-radius:4px;padding:10px 12px;overflow-wrap:anywhere}
 .card{background:var(--surface);border:2px solid #2a2118;border-radius:6px;padding:14px 16px;box-shadow:3px 3px 0 rgba(42,33,24,.25)}
 .card h2{margin:0 0 8px;font-family:var(--f-pixel);font-size:19px;font-weight:400;letter-spacing:.05em}
 .item{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px dashed var(--line)}
@@ -56,20 +59,23 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body)}
 .foot button[disabled]{opacity:.5}
 .testbar{background:#b7791f;color:#fff;text-align:center;font-weight:700;padding:4px;border-radius:4px}
 [hidden]{display:none!important}
-@media(min-width:700px){.item .t{font-size:22px}}
+@media(min-width:700px){.item .t{font-size:22px}.days{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="testbar" id="testbar" hidden>測試版：連到測試用的假資料，不是正式平台</div>
-  <div class="top"><span class="date" id="date"></span><span class="cloth" id="clothChip"></span></div>
+  <div class="top"><span class="date" id="date"></span></div>
   <div class="alert" id="err" hidden><b>讀不到資料，請看白板</b><small id="errMsg"></small></div>
   <div class="banner"><img class="bg" id="bgImg" alt=""><div class="board"><div class="b1" id="b1"></div><div class="b2" id="b2"></div></div><img class="chi" id="chi" alt=""><div class="bubble" id="bubble" hidden>凹嗚嗚嗚嗚</div></div>
   <div class="warn" id="warn" hidden></div>
   <div class="cards" id="cards">
-    <section class="card"><h2>今天要做</h2><div id="today"></div></section>
+    <div class="days">
+      <section class="card"><h2>今天要做</h2><div id="today"></div></section>
+      <section class="card tmr" id="tmrCard" hidden><h2 id="tmrTitle">明天</h2><div id="tomorrow"></div></section>
+    </div>
     <section class="card"><h2>本週期限</h2><div class="dl" id="week"></div></section>
-    <section class="card"><h2>口布本週：留／丟</h2><div id="cloth"></div></section>
+    <section class="card" id="linkCard" hidden><h2>連結</h2><div class="links" id="links"></div></section>
   </div>
   <div class="foot"><span id="foot"></span><button id="reload" type="button">重新整理</button></div>
 </div>
@@ -93,7 +99,6 @@ function clear(node) { while (node.firstChild) node.removeChild(node.firstChild)
 
 function render(m) {
   document.getElementById('date').textContent = m.dateText;
-  document.getElementById('clothChip').textContent = m.clothChip;
   document.getElementById('bgImg').src = ART.banner;
   document.getElementById('b1').textContent = m.boardLine1;
   document.getElementById('b2').textContent = m.boardLine2;
@@ -112,20 +117,30 @@ function render(m) {
   if (m.warnings.length) {
     warn.appendChild(el('div', null, '試算表有 ' + m.warnings.length + ' 個問題，請告訴 Maurice：'));
     var ul = el('ul');
-    m.warnings.forEach(function (w) { ul.appendChild(el('li', null, '第 ' + w.line + ' 列：' + w.text)); });
+    m.warnings.forEach(function (w) { ul.appendChild(el('li', null, (w.line ? '第 ' + w.line + ' 列：' : '') + w.text)); });
     warn.appendChild(ul);
     warn.hidden = false;
   } else { warn.hidden = true; }
 
-  var T = document.getElementById('today'); clear(T);
-  if (!m.todayItems.length) T.appendChild(el('div', 'empty', '今天沒有事項'));
-  m.todayItems.forEach(function (it) {
-    var row = el('div', 'item');
-    var im = el('img'); im.alt = it.category; im.src = ART['icon_' + it.category]; row.appendChild(im);
-    row.appendChild(el('div', 't', it.text));
-    if (it.last) row.appendChild(el('span', 'tag last', '最晚今天'));
-    T.appendChild(row);
-  });
+  // 今天、明天兩張卡片（口布也在這裡出現：「口布先留著」「口布丟出」是星期日的事項）
+  function dayList(box, items, emptyText, lastText) {
+    clear(box);
+    if (!items.length) box.appendChild(el('div', 'empty', emptyText));
+    items.forEach(function (it) {
+      var row = el('div', 'item');
+      var im = el('img'); im.alt = it.category; im.src = ART['icon_' + it.category]; row.appendChild(im);
+      row.appendChild(el('div', 't', it.text));
+      if (it.last) row.appendChild(el('span', 'tag last', lastText));
+      box.appendChild(row);
+    });
+  }
+  dayList(document.getElementById('today'), m.todayItems, '今天沒有事項', '最晚今天');
+  var tmrCard = document.getElementById('tmrCard');
+  if (Array.isArray(m.tomorrowItems)) {
+    document.getElementById('tmrTitle').textContent = '明天（星期' + (m.tomorrowDayChar || '') + '）';
+    dayList(document.getElementById('tomorrow'), m.tomorrowItems, '明天沒有事項', '最晚明天');
+    tmrCard.hidden = false;
+  } else { tmrCard.hidden = true; }
 
   var W = document.getElementById('week'); clear(W);
   if (!m.deadlines.length) W.appendChild(el('div', 'empty', '本週沒有期限'));
@@ -136,17 +151,16 @@ function render(m) {
     W.appendChild(el('span', 'tag ' + (d.status === 'past' ? 'past' : d.status === 'today' ? 'last' : 'later'), label));
   });
 
-  var C = document.getElementById('cloth'); clear(C);
-  if (!m.cloth.length) C.appendChild(el('div', 'empty', '本週沒有口布事項'));
-  m.cloth.forEach(function (c) {
-    var row = el('div', 'cloth-row');
-    var im = el('img'); im.alt = '布品'; im.src = ART.icon_布品; row.appendChild(im);
-    var box = el('div');
-    box.appendChild(el('div', 'verb ' + (c.verdict === '丟' ? 'toss' : c.verdict === '留' ? 'keep' : 'unknown'), c.verdict || '請看事項'));
-    box.appendChild(el('div', 'sub', '週' + c.dayChar + ' ' + c.dateText + '　' + c.text));
-    row.appendChild(box);
-    C.appendChild(row);
+  // 最下面的連結：網址由 Google 試算表「連結」分頁給，網頁裡不寫網址
+  var L = document.getElementById('links'); clear(L);
+  var links = Array.isArray(m.links) ? m.links : [];
+  links.forEach(function (k) {
+    if (!k || typeof k.url !== 'string' || typeof k.name !== 'string') return;
+    if (!/^https:\/\/(drive|docs)\.google\.com\/\S*$/.test(k.url)) return;
+    var a = el('a', null, k.name); a.href = k.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    L.appendChild(a);
   });
+  document.getElementById('linkCard').hidden = !L.firstChild;
 }
 
 // 台北今天的「11/23（一）」，只在連不上 Google 時用
@@ -156,7 +170,6 @@ function localDateText() {
 }
 function renderLoading() {
   document.getElementById('date').textContent = localDateText();
-  document.getElementById('clothChip').textContent = '口布本週：讀取中';
   document.getElementById('bgImg').src = ART.banner;
   document.getElementById('b1').textContent = '讀取中';
   document.getElementById('b2').textContent = '請稍等';
@@ -198,7 +211,7 @@ function load(btn, byUser) {
       render({ok: false, dateText: localDateText(), readAt: '--:--',
         message: '連不上資料（' + (e && e.zh ? e.message : '網路或 Google 沒回應') + '），請稍後按「重新整理」',
         warnings: [], todayItems: [], deadlines: [], cloth: [], pose: 'stand',
-        boardLine1: '讀不到資料', boardLine2: '請看白板', clothChip: '口布本週：讀不到'});
+        boardLine1: '讀不到資料', boardLine2: '請看白板'});
       if (byUser) document.getElementById('foot').textContent = '重新整理失敗（' + taipeiTime() + '），請稍後再按一次';
     }
     done();
