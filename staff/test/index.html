@@ -90,8 +90,8 @@ var ART = {"banner": "../art/banner.webp", "icon_叫貨": "../art/icon_order.png
 var MODEL = null;
 // 和 Google 那邊一樣的網址規則，網頁再擋一次
 var LINK_RULES = {
-  '公告資料夾': /^https:\/\/drive\.google\.com\/drive\/folders\/[A-Za-z0-9_-]+\/?(\?usp=[A-Za-z_]+)?$/,
-  '員工手冊': /^https:\/\/(docs\.google\.com\/document\/d\/[A-Za-z0-9_-]+|drive\.google\.com\/file\/d\/[A-Za-z0-9_-]+)(\/(edit|view|preview))?\/?(\?(usp=[A-Za-z_]+|tab=t\.[A-Za-z0-9_]+)(&(usp=[A-Za-z_]+|tab=t\.[A-Za-z0-9_]+))?)?$/
+  '公告資料夾': /^https:\/\/drive\.google\.com\/drive\/folders\/[A-Za-z0-9_-]+\/?(\?[A-Za-z0-9=&_.-]*)?$/,
+  '員工手冊': /^https:\/\/(docs\.google\.com\/document\/d\/[A-Za-z0-9_-]+|drive\.google\.com\/file\/d\/[A-Za-z0-9_-]+)(\/(edit|view|preview))?\/?(\?[A-Za-z0-9=&_.-]*)?$/
 };
 var WEEK_LABEL = {past: '已過', today: '今天'};
 
