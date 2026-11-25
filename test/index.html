@@ -281,8 +281,9 @@ function needAck(t,m){return !t.archived&&t.status!=='完成'&&isMine(t,m)&&!t.r
 
 var OWN_CLS={'內場主管':'r-in','外場主管':'r-out','行銷':'r-mk'};
 function ownersHtml(t,m){return t.owners.map(function(n){var r='';(m.people||[]).forEach(function(p){if(p.name===n)r=OWN_CLS[p.role]||'';});return '<span class="own'+(r?' '+r:'')+'">'+esc(n)+'</span>';}).join('');}
-function doneDay(t){   // 這件變成完成的日期。關卡全勾完：看最晚勾的那一關（回覆、編輯也會改「最後更新」，所以不看它）；沒勾完就手動改完成、或沒有關卡：看「最後更新」
+function doneDay(t){   // 這件變成完成的日期。伺服器有「完成日」欄（2026-11-25 起）就只看它；舊伺服器沒有這欄才用下面的推算。關卡全勾完：看最晚勾的那一關（回覆、編輯也會改「最後更新」，所以不看它）；沒勾完就手動改完成、或沒有關卡：看「最後更新」
   var ok=function(v){return /^\d{4}-\d{2}-\d{2}/.test(String(v||''));};
+  if(Object.prototype.hasOwnProperty.call(t,'doneDate'))return ok(t.doneDate)?String(t.doneDate).slice(0,10):'';
   var ms=t.ms||[],all=ms.length>0&&ms.every(function(x){return x.done;});
   if(all){var best='';ms.forEach(function(x){var a=String(x.at||'');if(ok(a)&&a>best)best=a;});if(best)return best.slice(0,10);}
   return ok(t.updated)?String(t.updated).slice(0,10):'';}
@@ -589,7 +590,8 @@ function quick(fn,payload,apply){
   collect();
   var t=findTask(MODEL,payload.id);if(!t)return;
   var was=t.status;apply(t);fixUnreplied(t);
-  if(was!=='完成'&&t.status==='完成')t.updated=MODEL.data.today+' '+nowStr().slice(11)+':00';
+  if(was!=='完成'&&t.status==='完成'){t.updated=MODEL.data.today+' '+nowStr().slice(11)+':00';if(Object.prototype.hasOwnProperty.call(t,'doneDate'))t.doneDate=MODEL.data.today;}
+  if(was==='完成'&&t.status!=='完成'&&Object.prototype.hasOwnProperty.call(t,'doneDate'))t.doneDate='';   // 和伺服器同一條：離開完成就清掉完成日
   t.overdue=!!(t.due&&MODEL.data&&MODEL.data.today>t.due&&t.status!=='完成');   // 和伺服器同一條規則，存檔中那幾秒也不會算錯逾期
   Q.push({fn:fn,p:payload});
   render(MODEL,true);showSaving();
