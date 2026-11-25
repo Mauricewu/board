@@ -136,7 +136,7 @@ details.others>summary{cursor:pointer;color:var(--gold);margin:6px 2px;font-size
 .qd{border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:8px}
 .qmeta{font-size:13px;color:#b8bfd0;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
 .qd .ms{margin-top:0}.qd .rep{margin-top:0}
-.just{font-size:13px;color:#5fd47f;overflow-wrap:anywhere}
+.just{font-size:14px;color:#5fd47f;background:#1e3a2a;border:1px solid #5fd47f;border-radius:10px;padding:8px 12px;overflow-wrap:anywhere}
 .stuckbtn{min-height:44px;border:1px solid var(--red);border-radius:10px;background:transparent;color:var(--red);font:15px var(--f-body)}
 .unstuck{min-height:44px;border-radius:10px;font:15px var(--f-body)}
 .stuckf{background:#241a1a;border:1px solid var(--red);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
@@ -441,9 +441,9 @@ function progHtml(m){
   return h+'</div>';
 }
 function evHtml(m,o){
-  o=o||{};var d=m.data,h=o.noHead?'':'<div class="sechead"><h2>'+(o.title||'店內行事曆')+'</h2><div><button data-act="ev-new">'+(o.btn||'＋ 新增行事曆')+'</button></div></div>';
+  o=o||{};var d=m.data,h=o.noHead?'':'<div class="sechead"><h2>'+(o.title||'店內行事曆')+'</h2><div><button data-act="ev-new"'+(o.btn?' style="background:transparent;color:var(--gold);border:1px dashed var(--gold)"':'')+'>'+(o.btn||'＋ 新增行事曆')+'</button></div></div>';
   if(o.noHead)h+='<div><button data-act="ev-new">＋ 新增行事曆</button></div>';
-  if(o.hint)h+='<p class="hint" style="margin:0 2px">'+o.hint+'</p>';
+  if(o.hint)h+='<p class="hint" style="margin:0 2px">'+(d.events.length?'接下來 '+d.eventDays+' 天有 '+d.events.length+' 筆。':'')+o.hint+'</p>';
   if(ui.evForm)h+=evFormHtml();
   if(!d.events.length){
     h+='<div class="card"><p class="muted" style="margin:0">未來 '+d.eventDays+' 天沒有行事曆項目。</p></div>';
@@ -527,10 +527,12 @@ function qCard(t,m){
   if(t.status==='卡住'&&!ro&&!dt)h+='<div class="stucknote">已標成卡住，Maurice 會收到通知'+(mine?'；解決了按「細節」裡的「不卡了，繼續做」':'')+'</div>';
   if(dt)h+='<div class="cap" style="margin-top:0"><b>今天完成，先留在這裡；明天會收進最下面「已完成」。</b></div>';
   var fx=ui.cheer[t.id];
-  if(fx&&fx.ms)h+='<div class="just cheer-fx">已記下「'+esc(fx.ms)+'」，背景存檔中；按錯了可以點「細節」取消勾選</div>';
+  if(fx&&fx.ms)h+='<div class="just cheer-fx">已記下「'+esc(fx.ms)+'」，背景存檔中，可以直接做下一件（按錯了點「細節」取消勾選）</div>';
   if(t.problems.length)h+='<div class="cardwarn">這筆資料有問題，請告訴 Maurice：'+t.problems.map(esc).join('；')+'</div>';
   var main='';
-  if(!ro&&mine){
+  var ackPending=Q.some(function(j){return j.fn==='addReply'&&j.p&&j.p.id===t.id&&j.p.text==='收到';});
+  if(!ro&&mine&&ackPending&&!ack)main='<button class="main" disabled>已收到，存檔中…</button>';
+  else if(!ro&&mine){
     if(ack)main='<button class="main" data-act="ack" data-id="'+esc(t.id)+'">收到</button>';
     else if(next&&t.status!=='完成')main='<button class="main" data-act="step" data-id="'+esc(t.id)+'" data-order="'+next.order+'">這一步做完了</button>';
     else if(t.status!=='完成')main='<button class="main" data-act="finish" data-id="'+esc(t.id)+'">標成完成</button>';   // 關卡都勾完（或沒有關卡）但狀態還沒變完成：成員畫面沒有狀態選單，用這顆收尾
@@ -611,6 +613,7 @@ function render(m,nocollect){
       var mine=open.filter(function(t){return isMine(t,m);}),others=open.filter(function(t){return !isMine(t,m);});
       var todo=mine.filter(function(t){return t.status!=='完成';});
       if(mk)h+=evHtml(m,{title:'店內行事曆與行銷活動',btn:'＋ 新增活動或檔期',hint:'包場、活動、行銷檔期都記在這裡'});
+      if(mk)h+='<div class="sechead"><h2>你的待辦</h2></div>';
       h+=helloHtml(m,todo);
       mine.forEach(function(t){h+=qCard(t,m);});
       h+=progHtml(m);
@@ -740,7 +743,7 @@ function runQ(){
   }).catch(function(e){qFail('不確定有沒有存成功（'+(e&&e.message?e.message:e)+'）');});
 }
 function qFail(msg){
-  var n=Q.length;Q=[];showSaving();
+  var n=Q.length;Q=[];showSaving();ui.cheer={};
   toast(msg+'。畫面已換回試算表裡的樣子'+(n>1?'，後面 '+(n-1)+' 個動作也沒有存，請再按一次':'')+'。',true);
   if(LAST)MODEL=JSON.parse(LAST);
   ui.stale=true;ui.staleErr=null;render(MODEL);
@@ -820,6 +823,10 @@ $('app').addEventListener('click',function(e){
   var el=e.target.closest?e.target.closest('[data-act]'):null;
   if(!el||ui.busy)return;
   var act=el.getAttribute('data-act'),id=el.getAttribute('data-id');
+  if(act==='ack'||act==='step'||act==='finish'){   // 大按鈕：同一張卡 1 秒內只認第一下，避免連點兩下多勾一關
+    if(ui.lastMain&&ui.lastMain.id===id&&Date.now()-ui.lastMain.t<1000)return;
+    ui.lastMain={id:id,t:Date.now()};
+  }
   if(act!=='archive'&&ui.armed){ui.armed=null;}
   if(act==='reload'&&Q.length){toast('還在存檔，等右下角「存檔中」消失再重新整理。',false);return;}
   if(act==='reload'){
@@ -849,8 +856,8 @@ $('app').addEventListener('click',function(e){
     var sText=(drafts['stuck:'+id]||'').trim();
     if(!sText){toast('請先寫卡在哪裡、要誰幫忙',true);return;}
     if(ui.busy||ui.stale)return;
-    ui.stuck[id]=false;delete drafts['stuck:'+id];
-    quick('addReply',{id:id,text:sText},function(t){t.replies.push({who:MODEL.me.name,time:nowStr(),text:sText});});   // 先存說明，再改狀態；說明沒存成功，狀態也不會改
+    ui.stuck[id]=false;
+    quick('addReply',{id:id,text:sText},function(t){delete drafts['stuck:'+id];t.replies.push({who:MODEL.me.name,time:nowStr(),text:sText});});   // 先存說明，再改狀態；說明沒存成功，狀態也不會改
     quick('setStatus',{id:id,status:'卡住'},function(t){var was=t.status;t.status='卡住';if(was!=='卡住')t.replies.push({who:MODEL.me.name,time:nowStr(),text:'（狀態改為：卡住）'});});
   }else if(act==='finish'){
     quick('setStatus',{id:id,status:'完成'},function(t){var was=t.status;t.status='完成';if(was!=='完成')t.replies.push({who:MODEL.me.name,time:nowStr(),text:'（狀態改為：完成）'});});
