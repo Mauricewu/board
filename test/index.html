@@ -281,6 +281,10 @@ function needAck(t,m){return !t.archived&&t.status!=='完成'&&isMine(t,m)&&!t.r
 
 var OWN_CLS={'內場主管':'r-in','外場主管':'r-out','行銷':'r-mk'};
 function ownersHtml(t,m){return t.owners.map(function(n){var r='';(m.people||[]).forEach(function(p){if(p.name===n)r=OWN_CLS[p.role]||'';});return '<span class="own'+(r?' '+r:'')+'">'+esc(n)+'</span>';}).join('');}
+function doneDay(t){   // 這件變成完成的日期：先看「最後更新」，格式不對就看最晚勾的關卡
+  var u=String(t.updated||'');if(/^\d{4}-\d{2}-\d{2}/.test(u))return u.slice(0,10);
+  var best='';(t.ms||[]).forEach(function(x){var a=String(x.at||'');if(x.done&&/^\d{4}-\d{2}-\d{2}/.test(a)&&a>best)best=a;});return best.slice(0,10);}
+function doneToday(t,m){return t.status==='完成'&&!t.archived&&!!(m&&m.data&&m.data.today)&&doneDay(t)===m.data.today;}
 function taskHtml(t,m){
   var boss=isBoss(m),ro=t.archived,can=boss||isMine(t,m);   // can：能勾里程碑、改狀態（負責人與老闆）
   var total=t.ms.length,done=t.ms.filter(function(x){return x.done;}).length,all=total>0&&done===total;
@@ -291,6 +295,8 @@ function taskHtml(t,m){
   if(t.overdue)h+='<span class="pill red">逾期</span>';
   if(t.unreplied)h+='<span class="pill yel">未回覆</span>';
   if(ro)h+='<span class="pill">已封存</span>';
+  var dt=doneToday(t,m);
+  if(dt)h+='<span class="pill s3">今天完成</span>';
   var sc={'進行中':'s2','完成':'s3','卡住':'s4'}[t.status]||'';
   h+='<span class="pill '+sc+'">'+esc(t.status||'（未填）')+'</span></div></div>';
   if(needAck(t,m))h+='<div class="ack"><button data-act="ack" data-id="'+esc(t.id)+'">收到</button><span>按一下就等於回覆「收到」，頭上的「！」會消失</span></div>';
@@ -306,6 +312,7 @@ function taskHtml(t,m){
   }else{
     h+='<div class="cap">還沒有里程碑</div>';
   }
+  if(dt)h+='<div class="cap">今天完成，明天會收進最下面「已完成」。</div>';
   var fx=ui.cheer[t.id];
   if(fx)h+='<div class="cheer cheer-fx'+(fx.gold?' gold':'')+'">'+esc(fx.text)+'</div>';
 
@@ -463,16 +470,17 @@ function render(m,nocollect){
     h+='</div></div>';
     if(boss)h+=formHtml(m);
     var list=d.tasks.filter(function(t){return ui.showArchived||!t.archived;});
-    var open=list.filter(function(t){return t.status!=='完成';}),fin=list.filter(function(t){return t.status==='完成';});
+    var open=list.filter(function(t){return t.status!=='完成'||doneToday(t,m);}),fin=list.filter(function(t){return t.status==='完成'&&!doneToday(t,m);});
     h+=progHtml(m);
     if(!list.length)h+='<div class="card"><p class="muted" style="margin:0">還沒有交辦。'+(boss?'按右上角「新增交辦」建立第一筆。':'')+'</p></div>';
     if(boss){
       open.forEach(function(t){h+=taskHtml(t,m);});
     }else{
       var mine=open.filter(function(t){return isMine(t,m);}),others=open.filter(function(t){return !isMine(t,m);});
-      if(list.length)h+='<p class="hint">你的未完成交辦 '+mine.length+' 件'+(mine.length?'，排在最上面':'')+'</p>';
+      var mineOpen=mine.filter(function(t){return t.status!=='完成';}).length;
+      if(list.length)h+='<p class="hint">你的未完成交辦 '+mineOpen+' 件'+(mineOpen?'，排在最上面':'')+'</p>';
       mine.forEach(function(t){h+=taskHtml(t,m);});
-      if(list.length&&!mine.length)h+='<div class="card"><p class="muted" style="margin:0">你目前沒有未完成的交辦。</p></div>';
+      if(list.length&&!mineOpen)h+='<div class="card"><p class="muted" style="margin:0">你目前沒有未完成的交辦。</p></div>';
       h+=office(m);
       if(others.length){
         h+='<details class="others"'+(ui.openOthers?' open':'')+' ontoggle="ui.openOthers=this.open"><summary>其他人的交辦 '+others.length+' 件（點開看）</summary><div style="display:flex;flex-direction:column;gap:12px">'+
@@ -516,6 +524,8 @@ function render(m,nocollect){
 
 /* ---------- 送出 ---------- */
 function toast(text,isErr){var t=$('toast');t.textContent=text+(isErr?'（點一下這裡關閉）':'');t.className=isErr?'err':'';t.style.display='block';}
+var doneTimer=null;
+function doneMsg(){toast('這件全部完成了！今天先排在你的交辦最後面，明天才收進最下面「已完成」。',false);clearTimeout(doneTimer);doneTimer=setTimeout(function(){if(!Q.length)untoast();},6000);}
 function untoast(){$('toast').style.display='none';}
 $('toast').addEventListener('click',untoast);
 
@@ -564,7 +574,8 @@ function quick(fn,payload,apply){
   if(ui.busy||ui.stale)return;
   collect();
   var t=findTask(MODEL,payload.id);if(!t)return;
-  apply(t);fixUnreplied(t);
+  var was=t.status;apply(t);fixUnreplied(t);
+  if(was!=='完成'&&t.status==='完成'){t.updated=MODEL.data.today+' '+nowStr().slice(11)+':00';doneMsg();}
   t.overdue=!!(t.due&&MODEL.data&&MODEL.data.today>t.due&&t.status!=='完成');   // 和伺服器同一條規則，存檔中那幾秒也不會算錯逾期
   Q.push({fn:fn,p:payload});
   render(MODEL,true);showSaving();
