@@ -528,7 +528,8 @@ function render(m,nocollect){
 function toast(text,isErr){var t=$('toast');t.textContent=text+(isErr?'（點一下這裡關閉）':'');t.className=isErr?'err':'';t.style.display='block';}
 var doneTimer=null;
 var DONE_MSG='';
-function doneMsg(){DONE_MSG=isBoss(MODEL)?'這件全部完成了！今天先留在清單上，明天才收進最下面「已完成」。':'這件全部完成了！今天先排在你的交辦最後面，明天才收進最下面「已完成」。';
+function doneMsg(t){var head=t.ms.length&&t.ms.every(function(x){return x.done;})?'這件全部完成了！':'這件改成完成了！';
+  DONE_MSG=head+(isBoss(MODEL)?'今天先留在清單上，明天才收進最下面「已完成」。':'今天先排在你的交辦最後面，明天才收進最下面「已完成」。');
   toast(DONE_MSG,false);clearTimeout(doneTimer);doneTimer=setTimeout(function(){if($('toast').textContent===DONE_MSG)untoast();},6000);}
 function untoast(){$('toast').style.display='none';}
 $('toast').addEventListener('click',untoast);
@@ -579,7 +580,7 @@ function quick(fn,payload,apply){
   collect();
   var t=findTask(MODEL,payload.id);if(!t)return;
   var was=t.status;apply(t);fixUnreplied(t);
-  if(was!=='完成'&&t.status==='完成'){t.updated=MODEL.data.today+' '+nowStr().slice(11)+':00';doneMsg();}
+  if(was!=='完成'&&t.status==='完成'){t.updated=MODEL.data.today+' '+nowStr().slice(11)+':00';doneMsg(t);}
   t.overdue=!!(t.due&&MODEL.data&&MODEL.data.today>t.due&&t.status!=='完成');   // 和伺服器同一條規則，存檔中那幾秒也不會算錯逾期
   Q.push({fn:fn,p:payload});
   render(MODEL,true);showSaving();
