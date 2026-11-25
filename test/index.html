@@ -533,6 +533,7 @@ function qCard(t,m){
   if(!ro&&mine){
     if(ack)main='<button class="main" data-act="ack" data-id="'+esc(t.id)+'">收到</button>';
     else if(next&&t.status!=='完成')main='<button class="main" data-act="step" data-id="'+esc(t.id)+'" data-order="'+next.order+'">這一步做完了</button>';
+    else if(t.status!=='完成')main='<button class="main" data-act="finish" data-id="'+esc(t.id)+'">標成完成</button>';   // 關卡都勾完（或沒有關卡）但狀態還沒變完成：成員畫面沒有狀態選單，用這顆收尾
   }
   h+='<div class="qb">'+main+'<button class="det'+(main?'':' wide')+'" data-act="det" data-id="'+esc(t.id)+'" aria-expanded="'+(open?'true':'false')+'">'+(open?'收起':'細節')+'</button></div>';
   if(open)h+=qDetail(t,m);
@@ -851,6 +852,8 @@ $('app').addEventListener('click',function(e){
     ui.stuck[id]=false;delete drafts['stuck:'+id];
     quick('addReply',{id:id,text:sText},function(t){t.replies.push({who:MODEL.me.name,time:nowStr(),text:sText});});   // 先存說明，再改狀態；說明沒存成功，狀態也不會改
     quick('setStatus',{id:id,status:'卡住'},function(t){var was=t.status;t.status='卡住';if(was!=='卡住')t.replies.push({who:MODEL.me.name,time:nowStr(),text:'（狀態改為：卡住）'});});
+  }else if(act==='finish'){
+    quick('setStatus',{id:id,status:'完成'},function(t){var was=t.status;t.status='完成';if(was!=='完成')t.replies.push({who:MODEL.me.name,time:nowStr(),text:'（狀態改為：完成）'});});
   }else if(act==='unstuck'){
     quick('setStatus',{id:id,status:'進行中'},function(t){var was=t.status;t.status='進行中';if(was!=='進行中')t.replies.push({who:MODEL.me.name,time:nowStr(),text:'（狀態改為：進行中）'});});
   }else if(act==='ack'){
