@@ -151,7 +151,7 @@ details.fold>summary span:first-child{flex:none}
 details.fold>summary::after{content:"▾";flex:none;color:var(--gold);font-size:14px}
 details.fold[open]>summary::after{content:"▴"}
 .qc textarea,.qc input,details.fold input,details.fold select,details.fold textarea{font-size:16px}
-#app.stale [data-act="det"],#app.stale details>summary{pointer-events:auto}
+#app.stale [data-act="det"],#app.stale details.fold>summary{pointer-events:auto}
 details.fold>summary::-webkit-details-marker{display:none}
 details.fold>summary span:last-child{color:#b8bfd0;font-size:13px;text-align:right;overflow-wrap:anywhere;min-width:0;flex:1 1 auto}
 details.fold[open]>summary{border-color:var(--gold)}
@@ -506,7 +506,7 @@ function helloHtml(m,todo){   // 最上面：你有幾件要做＋最近期限�
   var h='<div class="hello"><span class="n">'+(todo.length?'你有 '+todo.length+' 件要做':'你目前沒有要做的交辦')+'</span>';
   var s=[];
   if(od)s.push('<b>其中 '+od+' 件已逾期</b>');
-  if(near){var n=daysBetween(d.today,near);s.push('最近的期限：'+fmtDW(near)+(n===null?'':n<=0?'，就是今天':'，還有 '+n+' 天'));}
+  if(near){var n=daysBetween(d.today,near);s.push('最近的期限：'+fmtDW(near)+(n===null?'':n<0?'，已過期':n===0?'，就是今天':'，還有 '+n+' 天'));}
   if(s.length)h+='<span class="s">'+s.join('　')+'</span>';
   return h+'</div>';
 }
@@ -525,7 +525,7 @@ function qCard(t,m){
   if(dt)h+='<span class="pill s3">今天完成</span>';
   else if(t.status==='完成')h+='<span class="pill s3">完成</span>';
   h+=dueTag(t,m)+'</div></div>';
-  h+='<div class="qn">'+(t.status==='完成'?'<b>已完成</b>'+(total&&!all?'（還有關卡沒勾）':''):(total?(all?'<b>關卡都勾完了</b>':'下一步：<b>'+esc(next.text)+'</b>'):'還沒有關卡'))+'</div>';
+  h+='<div class="qn">'+(t.status==='完成'?'<b>已完成</b>'+(total&&!all?'（還有關卡沒勾）':''):(total?(all?'<b>關卡都勾完了</b>'+(mine&&!ro?'（要重做哪一關，到「細節」取消那一關的勾）':''):'下一步：<b>'+esc(next.text)+'</b>'):'還沒有關卡'))+'</div>';
   if(total){
     h+='<div class="mini">';
     t.ms.forEach(function(x){h+='<i'+(x.done?' class="on"':'')+'></i>';});
@@ -670,7 +670,7 @@ function render(m,nocollect){
       ui.cheer={};
       var els=$('app').querySelectorAll('.cheer-fx');
       for(var i=0;i<els.length;i++)els[i].parentNode.removeChild(els[i]);
-    },6000);
+    },isBoss(m)?3000:6000);   // 成員的綠框留 6 秒；老闆照舊 3 秒
   }
 }
 
@@ -723,7 +723,7 @@ document.addEventListener('visibilitychange',function(){   // 網頁開著過夜
 var Q=[];        // 排隊等存的動作，一次只送一筆，照按的順序
 var LAST='';     // 最後一次從試算表回來的資料（存檔失敗時退回用）
 function nowStr(){var d=new Date();function z(n){return (n<10?'0':'')+n;}return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());}
-function showSaving(){var e=$('saving'),tt=$('toast');if(Q.length){e.textContent='存檔中…（'+Q.length+'）先別關網頁';e.style.bottom=(tt.style.display==='block'?tt.offsetHeight+22:12)+'px';e.style.display='block';}else{e.style.display='none';if(tt.style.display==='block'&&tt.className!=='err')untoast();}}
+function showSaving(){var e=$('saving'),tt=$('toast');if(Q.length){e.textContent='存檔中…（'+Q.length+'）先別關網頁';e.style.bottom=(tt.style.display==='block'?tt.offsetHeight+22:12)+'px';e.style.display='block';}else{e.style.display='none';if(tt.style.display==='block'&&tt.className!=='err'&&!isBoss(MODEL))untoast();}}
 function fixUnreplied(t){t.unreplied=!t.archived&&t.status!=='完成'&&t.owners.some(function(o){return !t.replies.some(function(r){return r.who===o;})&&!t.ms.some(function(x){return x.done&&x.by===o;});});}
 function autoStatus(t){var d=t.ms.filter(function(x){return x.done;}).length,all=t.ms.length>0&&d===t.ms.length;
   if(all)t.status='完成';else if(t.status==='完成')t.status='進行中';else if(t.status==='未開始'&&d>0)t.status='進行中';}
