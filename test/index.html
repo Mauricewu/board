@@ -515,6 +515,7 @@ function render(m,nocollect){
        '<div class="detail">'+esc(m.detail)+'</div></div>';
   }
 
+  if(m.state==='ok'&&isBoss(m)&&m.data&&typeof m.data.notifyFilled==='boolean')h+='<p class="muted" style="margin:8px 0 0;font-size:13px">'+(m.data.notifyFilled?'通知信箱：已填寫（成員打字回覆或改成卡住時，會寄信給你）':'通知信箱：未填寫或格式不對，成員回覆時不會寄信給你。請看試算表「設定」的「通知信箱」那一列。')+'</p>';   // 只有老闆看得到；不顯示信箱本身
   if(m.state!=='invalid'&&m.state!=='loading')h+='<div class="foot"><span>'+(m.readAt?'讀取時間 '+esc(m.readAt):'')+'</span><button id="reload" data-act="reload">重新整理</button></div>';
   $('app').innerHTML=h;
   $('app').classList[ui.stale?'add':'remove']('stale');
