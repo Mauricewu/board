@@ -287,6 +287,13 @@ function doneDay(t){   // 這件變成完成的日期。關卡全勾完：看最
   if(all){var best='';ms.forEach(function(x){var a=String(x.at||'');if(ok(a)&&a>best)best=a;});if(best)return best.slice(0,10);}
   return ok(t.updated)?String(t.updated).slice(0,10):'';}
 function doneToday(t,m){return t.status==='完成'&&!t.archived&&!!(m&&m.data&&m.data.today)&&doneDay(t)===m.data.today;}
+function openOrder(list,m){   // 和伺服器同一條排序，但今天完成的當成未完成排，完成後不會跳位
+  return list.slice().sort(function(a,b){
+    var ga=(a.status==='完成'&&!doneToday(a,m))?1:0,gb=(b.status==='完成'&&!doneToday(b,m))?1:0;if(ga!==gb)return ga-gb;
+    if(!!a.overdue!==!!b.overdue)return a.overdue?-1:1;
+    var da=a.due||'9999-99-99',db=b.due||'9999-99-99';if(da!==db)return da<db?-1:1;
+    return (a.line||0)-(b.line||0);});}
+function taipeiToday(){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}catch(e){return '';}}
 function taskHtml(t,m){
   var boss=isBoss(m),ro=t.archived,can=boss||isMine(t,m);   // can：能勾里程碑、改狀態（負責人與老闆）
   var total=t.ms.length,done=t.ms.filter(function(x){return x.done;}).length,all=total>0&&done===total;
@@ -298,9 +305,8 @@ function taskHtml(t,m){
   if(t.unreplied)h+='<span class="pill yel">未回覆</span>';
   if(ro)h+='<span class="pill">已封存</span>';
   var dt=doneToday(t,m);
-  if(dt)h+='<span class="pill s3">今天完成</span>';
   var sc={'進行中':'s2','完成':'s3','卡住':'s4'}[t.status]||'';
-  h+='<span class="pill '+sc+'">'+esc(t.status||'（未填）')+'</span></div></div>';
+  h+='<span class="pill '+sc+'">'+(dt?'今天完成':esc(t.status||'（未填）'))+'</span></div></div>';
   if(needAck(t,m))h+='<div class="ack"><button data-act="ack" data-id="'+esc(t.id)+'">收到</button><span>按一下就等於回覆「收到」，頭上的「！」會消失</span></div>';
 
   if(total){
@@ -314,7 +320,7 @@ function taskHtml(t,m){
   }else{
     h+='<div class="cap">還沒有里程碑</div>';
   }
-  if(dt)h+='<div class="cap">今天完成，明天會收進最下面「已完成」。</div>';
+  if(dt)h+='<div class="cap"><b>今天完成，先留在這裡；明天會收進最下面「已完成」。</b></div>';
   var fx=ui.cheer[t.id];
   if(fx)h+='<div class="cheer cheer-fx'+(fx.gold?' gold':'')+'">'+esc(fx.text)+'</div>';
 
@@ -472,7 +478,7 @@ function render(m,nocollect){
     h+='</div></div>';
     if(boss)h+=formHtml(m);
     var list=d.tasks.filter(function(t){return ui.showArchived||!t.archived;});
-    var open=list.filter(function(t){return t.status!=='完成'||doneToday(t,m);}),fin=list.filter(function(t){return t.status==='完成'&&!doneToday(t,m);});
+    var open=openOrder(list.filter(function(t){return t.status!=='完成'||doneToday(t,m);}),m),fin=list.filter(function(t){return t.status==='完成'&&!doneToday(t,m);});
     h+=progHtml(m);
     if(!list.length)h+='<div class="card"><p class="muted" style="margin:0">還沒有交辦。'+(boss?'按右上角「新增交辦」建立第一筆。':'')+'</p></div>';
     if(boss){
@@ -481,11 +487,11 @@ function render(m,nocollect){
       var mine=open.filter(function(t){return isMine(t,m);}),others=open.filter(function(t){return !isMine(t,m);});
       var mineOpen=mine.filter(function(t){return t.status!=='完成';}).length;
       if(list.length)h+='<p class="hint">你的未完成交辦 '+mineOpen+' 件'+(mineOpen?'，排在最上面':'')+'</p>';
-      mine.forEach(function(t){h+=taskHtml(t,m);});
       if(list.length&&!mineOpen)h+='<div class="card"><p class="muted" style="margin:0">你目前沒有未完成的交辦。</p></div>';
+      mine.forEach(function(t){h+=taskHtml(t,m);});
       h+=office(m);
       if(others.length){
-        h+='<details class="others"'+(ui.openOthers?' open':'')+' ontoggle="ui.openOthers=this.open"><summary>其他人的交辦 '+others.length+' 件（點開看）</summary><div style="display:flex;flex-direction:column;gap:12px">'+
+        h+='<details class="others"'+(ui.openOthers?' open':'')+' ontoggle="ui.openOthers=this.open"><summary>其他人的交辦 '+(function(){var n=others.filter(function(t){return t.status!=='完成';}).length,d=others.length-n;return n+' 件'+(d?'、今天完成 '+d+' 件':'');})()+'（點開看）</summary><div style="display:flex;flex-direction:column;gap:12px">'+
           others.map(function(t){return taskHtml(t,m);}).join('')+'</div></details>';
       }
     }
@@ -526,11 +532,6 @@ function render(m,nocollect){
 
 /* ---------- 送出 ---------- */
 function toast(text,isErr){var t=$('toast');t.textContent=text+(isErr?'（點一下這裡關閉）':'');t.className=isErr?'err':'';t.style.display='block';}
-var doneTimer=null;
-var DONE_MSG='';
-function doneMsg(t){var head=t.ms.length&&t.ms.every(function(x){return x.done;})?'這件全部完成了！':'這件改成完成了！';
-  DONE_MSG=head+(isBoss(MODEL)?'今天先留在清單上，明天才收進最下面「已完成」。':'今天先排在你的交辦最後面，明天才收進最下面「已完成」。');
-  toast(DONE_MSG,false);clearTimeout(doneTimer);doneTimer=setTimeout(function(){if($('toast').textContent===DONE_MSG)untoast();},6000);}
 function untoast(){$('toast').style.display='none';}
 $('toast').addEventListener('click',untoast);
 
@@ -568,6 +569,13 @@ function loadModel(btn){
   });
 }
 
+document.addEventListener('visibilitychange',function(){   // 網頁開著過夜、隔天切回來：日期變了就自動重讀一次
+  try{if(document.visibilityState!=='visible')return;
+    var td=taipeiToday();
+    if(!td||!MODEL||MODEL.state!=='ok'||!MODEL.data||MODEL.data.today===td||Q.length||ui.busy)return;
+    collect();var b=$('reload');if(b){b.disabled=true;b.textContent='讀取中…';}loadModel(b);
+  }catch(e){}
+});
 var Q=[];        // 排隊等存的動作，一次只送一筆，照按的順序
 var LAST='';     // 最後一次從試算表回來的資料（存檔失敗時退回用）
 function nowStr(){var d=new Date();function z(n){return (n<10?'0':'')+n;}return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());}
@@ -580,7 +588,7 @@ function quick(fn,payload,apply){
   collect();
   var t=findTask(MODEL,payload.id);if(!t)return;
   var was=t.status;apply(t);fixUnreplied(t);
-  if(was!=='完成'&&t.status==='完成'){t.updated=MODEL.data.today+' '+nowStr().slice(11)+':00';doneMsg(t);}
+  if(was!=='完成'&&t.status==='完成')t.updated=MODEL.data.today+' '+nowStr().slice(11)+':00';
   t.overdue=!!(t.due&&MODEL.data&&MODEL.data.today>t.due&&t.status!=='完成');   // 和伺服器同一條規則，存檔中那幾秒也不會算錯逾期
   Q.push({fn:fn,p:payload});
   render(MODEL,true);showSaving();
