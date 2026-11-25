@@ -525,7 +525,8 @@ function render(m,nocollect){
 /* ---------- 送出 ---------- */
 function toast(text,isErr){var t=$('toast');t.textContent=text+(isErr?'（點一下這裡關閉）':'');t.className=isErr?'err':'';t.style.display='block';}
 var doneTimer=null;
-function doneMsg(){toast('這件全部完成了！今天先排在你的交辦最後面，明天才收進最下面「已完成」。',false);clearTimeout(doneTimer);doneTimer=setTimeout(function(){if(!Q.length)untoast();},6000);}
+var DONE_MSG='這件全部完成了！今天先排在你的交辦最後面，明天才收進最下面「已完成」。';
+function doneMsg(){toast(DONE_MSG,false);clearTimeout(doneTimer);doneTimer=setTimeout(function(){if($('toast').textContent===DONE_MSG)untoast();},6000);}
 function untoast(){$('toast').style.display='none';}
 $('toast').addEventListener('click',untoast);
 
