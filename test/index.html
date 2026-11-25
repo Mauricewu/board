@@ -124,14 +124,14 @@ details.others>summary{cursor:pointer;color:var(--gold);margin:6px 2px;font-size
 .hello .s{font-size:14px;color:#b8bfd0}.hello .s b{color:var(--red);font-weight:700}
 .qc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .qc.open{border-color:var(--gold)}.qc.gone{opacity:.7}
-.qh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.qh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:6px 10px}
 .qh>div:first-child{min-width:0;flex:1 1 160px}
 .qt{font-size:16px;font-weight:700;line-height:1.4;overflow-wrap:anywhere}
 .qn{font-size:15px;overflow-wrap:anywhere}.qn b{color:var(--gold)}
 .mini{display:flex;gap:4px;align-items:center;flex-wrap:wrap}.mini i{width:14px;height:8px;border-radius:2px;background:#2c3550}.mini i.on{background:#5fd47f}.mini span{font-size:12px;color:#b8bfd0;margin-left:6px}
 .qb{display:flex;gap:8px;align-items:stretch}
 .qb .main{flex:1 1 auto;min-height:52px;font-size:18px;border-radius:10px}
-.qb .det{min-height:52px;padding:0 14px;background:transparent;border:1px solid var(--line);color:#b8bfd0;font:14px var(--f-body);border-radius:10px}
+.qb .det{flex:none;white-space:nowrap;min-height:52px;padding:0 14px;background:transparent;border:1px solid var(--line);color:#b8bfd0;font:14px var(--f-body);border-radius:10px}
 .qb .det.wide{flex:1 1 auto}
 .qd{border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:8px}
 .qmeta{font-size:13px;color:#b8bfd0;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
@@ -144,12 +144,18 @@ details.others>summary{cursor:pointer;color:var(--gold);margin:6px 2px;font-size
 .stuckf textarea{min-height:72px;resize:vertical}
 .stuckf .go{background:var(--red);color:#11151f;min-height:48px;font-size:16px;border-radius:10px}
 .stuckf small{font-size:12px;color:#b8bfd0}
+.stuckf .cancel{min-height:44px;margin-top:6px;font:15px var(--f-body)}
 .stucknote{font-size:13px;color:var(--red)}
-details.fold>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:48px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 14px;font-size:15px}
+details.fold>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:48px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 14px;font-size:15px;color:var(--ink)}
+details.fold>summary span:first-child{flex:none}
+details.fold>summary::after{content:"▾";flex:none;color:var(--gold);font-size:14px}
+details.fold[open]>summary::after{content:"▴"}
+.qc textarea,.qc input,details.fold input,details.fold select,details.fold textarea{font-size:16px}
+#app.stale [data-act="det"],#app.stale details>summary{pointer-events:auto}
 details.fold>summary::-webkit-details-marker{display:none}
-details.fold>summary span:last-child{color:#b8bfd0;font-size:13px;text-align:right;overflow-wrap:anywhere}
+details.fold>summary span:last-child{color:#b8bfd0;font-size:13px;text-align:right;overflow-wrap:anywhere;min-width:0;flex:1 1 auto}
 details.fold[open]>summary{border-color:var(--gold)}
-details.fold>.fbody{display:flex;flex-direction:column;gap:12px;margin-top:10px}
+details.fold>.fbody,details.fold>summary+div{margin-top:10px}details.fold>.fbody{display:flex;flex-direction:column;gap:12px}
 </style>
 </head>
 <body>
@@ -470,6 +476,7 @@ function foldersHtml(m){
     return '<div class="frow"><a class="lnk" href="'+esc(f.url)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name)+'</a><span class="muted">'+esc(FOLDER_NOTE[f.name]||'')+'</span></div>';}).join('')+'</div>';
 }
 function meetingHtml(m,noHead){
+  if(noHead)ui.openMeet=true;   // 成員畫面外面已經有一層摺疊，點開就直接看到全文
   var mt=m.data.meeting,h=noHead?'':'<div class="sechead"><h2>最新主管會議記錄</h2></div>';
   if(mt.state==='ok'){
     h+='<div class="card"><div class="ttl">'+esc(mt.title)+'</div>'+
@@ -491,11 +498,11 @@ function dueTag(t,m){   // 卡片右上角的期限標籤
   var n=t.due?daysBetween(m.data.today,t.due):null;
   if(t.overdue)return '<span class="pill red">逾期'+(n!==null&&n<0?' '+(-n)+' 天':'')+'</span>';
   if(n===null)return '';
-  return '<span class="pill yel">'+(n<=0?'今天到期':'還 '+n+' 天')+'</span>';
+  return '<span class="pill yel">'+(n<0?'已過期':n===0?'今天到期':'還 '+n+' 天')+'</span>';
 }
 function helloHtml(m,todo){   // 最上面：你有幾件要做＋最近期限倒數
   var d=m.data,od=0,near='';
-  todo.forEach(function(t){if(t.overdue)od++;else if(t.due&&(!near||t.due<near))near=t.due;});
+  todo.forEach(function(t){if(t.overdue)od++;else if(/^\d{4}-\d{2}-\d{2}$/.test(t.due||'')&&(!near||t.due<near))near=t.due;});
   var h='<div class="hello"><span class="n">'+(todo.length?'你有 '+todo.length+' 件要做':'你目前沒有要做的交辦')+'</span>';
   var s=[];
   if(od)s.push('<b>其中 '+od+' 件已逾期</b>');
@@ -509,7 +516,7 @@ function qCard(t,m){
   var next=null;t.ms.forEach(function(x){if(!next&&!x.done)next=x;});
   var ack=needAck(t,m);
   var h='<div class="qc'+(open?' open':'')+(ro?' gone':'')+'" data-card="'+esc(t.id)+'"><div class="qh"><div>';
-  if(!mine)h+='<div class="who2" style="margin-bottom:4px">'+ownersHtml(t,m)+'</div>';
+  if(!mine||t.owners.length>1)h+='<div class="who2" style="margin-bottom:4px">'+ownersHtml(t,m)+'</div>';
   h+='<div class="qt">'+esc(t.title)+'</div></div><div class="tags">';
   if(ack)h+='<span class="pill red">新交辦</span>';
   else if(t.unreplied)h+='<span class="pill yel">未回覆</span>';
@@ -518,7 +525,7 @@ function qCard(t,m){
   if(dt)h+='<span class="pill s3">今天完成</span>';
   else if(t.status==='完成')h+='<span class="pill s3">完成</span>';
   h+=dueTag(t,m)+'</div></div>';
-  h+='<div class="qn">'+(total?(all?'<b>全部完成</b>':'下一步：<b>'+esc(next.text)+'</b>'):'還沒有關卡')+'</div>';
+  h+='<div class="qn">'+(t.status==='完成'?'<b>已完成</b>'+(total&&!all?'（還有關卡沒勾）':''):(total?(all?'<b>關卡都勾完了</b>':'下一步：<b>'+esc(next.text)+'</b>'):'還沒有關卡'))+'</div>';
   if(total){
     h+='<div class="mini">';
     t.ms.forEach(function(x){h+='<i'+(x.done?' class="on"':'')+'></i>';});
@@ -527,22 +534,23 @@ function qCard(t,m){
   if(t.status==='卡住'&&!ro&&!dt)h+='<div class="stucknote">已標成卡住，Maurice 會收到通知'+(mine?'；解決了按「細節」裡的「不卡了，繼續做」':'')+'</div>';
   if(dt)h+='<div class="cap" style="margin-top:0"><b>今天完成，先留在這裡；明天會收進最下面「已完成」。</b></div>';
   var fx=ui.cheer[t.id];
-  if(fx&&fx.ms)h+='<div class="just cheer-fx">已記下「'+esc(fx.ms)+'」，背景存檔中，可以直接做下一件（按錯了點「細節」取消勾選）</div>';
+  if(fx&&fx.ms)h+='<div class="just cheer-fx" role="status">已記下「'+esc(fx.ms)+'」，可以直接做下一件（按錯了到「細節」取消勾選）</div>';
   if(t.problems.length)h+='<div class="cardwarn">這筆資料有問題，請告訴 Maurice：'+t.problems.map(esc).join('；')+'</div>';
   var main='';
   var ackPending=Q.some(function(j){return j.fn==='addReply'&&j.p&&j.p.id===t.id&&j.p.text==='收到';});
   if(!ro&&mine&&ackPending&&!ack)main='<button class="main" disabled>已收到，存檔中…</button>';
+  else if(!ro&&mine&&t.status==='卡住'&&!ack)main='<button class="main" data-act="unstuck" data-id="'+esc(t.id)+'">不卡了，繼續做</button>';
   else if(!ro&&mine){
     if(ack)main='<button class="main" data-act="ack" data-id="'+esc(t.id)+'">收到</button>';
     else if(next&&t.status!=='完成')main='<button class="main" data-act="step" data-id="'+esc(t.id)+'" data-order="'+next.order+'">這一步做完了</button>';
     else if(t.status!=='完成')main='<button class="main" data-act="finish" data-id="'+esc(t.id)+'">標成完成</button>';   // 關卡都勾完（或沒有關卡）但狀態還沒變完成：成員畫面沒有狀態選單，用這顆收尾
   }
-  h+='<div class="qb">'+main+'<button class="det'+(main?'':' wide')+'" data-act="det" data-id="'+esc(t.id)+'" aria-expanded="'+(open?'true':'false')+'">'+(open?'收起':'細節')+'</button></div>';
+  h+='<div class="qb">'+main+'<button class="det'+(main?'':' wide')+'" data-act="det" data-id="'+esc(t.id)+'" aria-label="'+(open?'收起':'細節')+'：'+esc(t.title)+'" aria-expanded="'+(open?'true':'false')+'">'+(open?'收起':'細節')+'</button></div>';
   if(open)h+=qDetail(t,m);
   return h+'</div>';
 }
 function qDetail(t,m){
-  var ro=t.archived,mine=isMine(t,m);
+  var ro=t.archived||(t.status==='完成'&&!doneToday(t,m)),mine=isMine(t,m);   // 已完成的舊交辦只能看、能回覆，不能勾
   var h='<div class="qd"><div class="qmeta"><span>'+esc(t.id)+'　'+(t.start?fmtD(t.start):'')+(t.due?' ～ '+fmtDW(t.due):'')+'　負責：</span>'+ownersHtml(t,m)+'</div>';
   if(t.ms.length){
     h+='<div class="ms">';
@@ -557,17 +565,18 @@ function qDetail(t,m){
   h+='<div class="rep">';
   if(!t.replies.length)h+='<p class="muted">還沒有回覆</p>';
   t.replies.forEach(function(r){h+='<p><b>'+esc(r.who)+' '+fmtT(r.time)+'</b>　'+escBr(r.text)+'</p>';});
-  if(!ro)h+='<div class="rin"><textarea data-k="reply:'+esc(t.id)+'" maxlength="500" placeholder="寫回覆…"></textarea><button data-act="reply" data-id="'+esc(t.id)+'">送出</button></div>';
+  if(!t.archived)h+='<div class="rin"><textarea data-k="reply:'+esc(t.id)+'" maxlength="500" placeholder="寫回覆…"></textarea><button data-act="reply" data-id="'+esc(t.id)+'">送出</button></div>';
   h+='</div>';
+  if(!ro&&mine&&t.status==='完成')h+='<button class="ghost unstuck" data-act="reopen" data-id="'+esc(t.id)+'">按錯了，還沒做完</button>';
   if(!ro&&mine&&t.status!=='完成'){
     if(t.status==='卡住')h+='<button class="ghost unstuck" data-act="unstuck" data-id="'+esc(t.id)+'">不卡了，繼續做</button>';
     else if(ui.stuck[t.id])h+='<div class="stuckf"><span class="lb">卡住了</span><label class="fl" style="margin:0;color:var(--ink);font-size:14px">卡在哪裡？要誰幫忙？<textarea data-k="stuck:'+esc(t.id)+'" maxlength="500" placeholder="例如：磅秤壞了，要先買新的" style="display:block;width:100%;margin-top:4px"></textarea></label>'+
-      '<button class="go" data-act="stuck-go" data-id="'+esc(t.id)+'">送出，標成卡住</button><button class="ghost sm" data-act="stuck-cancel" data-id="'+esc(t.id)+'">取消</button><small>說明會變成一則回覆，Maurice 一眼看得到；不用再選狀態</small></div>';
+      '<button class="go" data-act="stuck-go" data-id="'+esc(t.id)+'">送出，標成卡住</button><small>說明會變成一則回覆，Maurice 一眼看得到；不用再選狀態</small><button class="ghost cancel" data-act="stuck-cancel" data-id="'+esc(t.id)+'">不送了</button></div>';
     else h+='<button class="stuckbtn" data-act="stuck" data-id="'+esc(t.id)+'">卡住了</button>';
   }
   return h+'</div>';
 }
-function nextEvText(d){var e=(d.events||[])[0];return e?fmtDW(e.date)+' '+e.title:'未來 '+d.eventDays+' 天沒有項目';}
+function nextEvText(d){var e=(d.events||[])[0];if(!e)return '未來 '+d.eventDays+' 天沒有項目';return (e.now?(e.date===d.today?'今天 ':'進行中（到 '+fmtD(e.end||e.date)+'） '):fmtDW(e.date)+' ')+e.title;}
 function foldHtml(key,label,right,body){
   return '<details class="fold"'+(ui[key]?' open':'')+' ontoggle="ui.'+key+'=this.open"><summary><span>'+label+'</span><span>'+esc(right)+'</span></summary><div class="fbody">'+body+'</div></details>';
 }
@@ -575,7 +584,8 @@ function foldHtml(key,label,right,body){
 function render(m,nocollect){
   stopOffice();
   if(!nocollect)collect();
-  var y=window.scrollY;
+  var y=window.scrollY,ae=document.activeElement,fk=ae&&ae.getAttribute&&ae.getAttribute('data-k'),fs=null;
+  try{if(fk&&typeof ae.selectionStart==='number')fs=[ae.selectionStart,ae.selectionEnd];}catch(e){}
   var h='';
   var who=m.state==='ok'?'你好，'+esc(m.me.name)+'（'+esc(m.me.role)+'）':'';
   h+='<div class="top"><div class="title">主管專案平台</div>'+(who?'<div class="who">'+who+'</div>':'')+'</div>';
@@ -612,19 +622,19 @@ function render(m,nocollect){
       var mk=m.me.role==='行銷';
       var mine=open.filter(function(t){return isMine(t,m);}),others=open.filter(function(t){return !isMine(t,m);});
       var todo=mine.filter(function(t){return t.status!=='完成';});
-      if(mk)h+=evHtml(m,{title:'店內行事曆與行銷活動',btn:'＋ 新增活動或檔期',hint:'包場、活動、行銷檔期都記在這裡'});
+      if(mk)h+=evHtml(m,{title:'店內行事曆與行銷活動',btn:'＋ 新增活動或檔期',hint:'包場、活動、行銷檔期都記在這裡；行銷檔期類別選「活動」'});
       if(mk)h+='<div class="sechead"><h2>你的待辦</h2></div>';
       h+=helloHtml(m,todo);
       mine.forEach(function(t){h+=qCard(t,m);});
       h+=progHtml(m);
       h+=office(m);
       if(others.length){
-        h+='<details class="others"'+(ui.openOthers?' open':'')+' ontoggle="ui.openOthers=this.open"><summary>'+(mk?'兩位主管的交辦 ':'其他人的交辦 ')+(function(){var n=others.filter(function(t){return t.status!=='完成';}).length,d=others.length-n;return n+' 件'+(d?'、今天完成 '+d+' 件':'');})()+'（點開看）</summary><div style="display:flex;flex-direction:column;gap:12px">'+
+        h+='<details class="others fold"'+(ui.openOthers?' open':'')+' ontoggle="ui.openOthers=this.open"><summary>'+(mk?'兩位主管的交辦 ':'其他人的交辦 ')+(function(){var n=others.filter(function(t){return t.status!=='完成';}).length,d=others.length-n;return n+' 件'+(d?'、今天完成 '+d+' 件':'');})()+'</summary><div style="display:flex;flex-direction:column;gap:12px">'+
           others.map(function(t){return qCard(t,m);}).join('')+'</div></details>';
       }
     }
     if(fin.length){
-      h+='<details class="done"'+(ui.openDone?' open':'')+' ontoggle="ui.openDone=this.open"><summary>已完成 '+fin.length+' 件</summary><div style="display:flex;flex-direction:column;gap:12px">'+
+      h+='<details class="done'+(boss?'':' fold')+'"'+(ui.openDone?' open':'')+' ontoggle="ui.openDone=this.open"><summary>已完成 '+fin.length+' 件</summary><div style="display:flex;flex-direction:column;gap:12px">'+
         fin.map(function(t){return card(t,m);}).join('')+'</div></details>';
     }
     if(boss){h+=evHtml(m);h+=meetingHtml(m);}
@@ -651,6 +661,7 @@ function render(m,nocollect){
   $('app').classList[ui.stale?'add':'remove']('stale');
   startOffice();
   restore();
+  if(fk){try{var ne=$('app').querySelector('[data-k="'+fk.replace(/"/g,'')+'"]');if(ne){ne.focus({preventScroll:true});if(fs)ne.setSelectionRange(fs[0],fs[1]);}}catch(e){}}   // 存檔回來重畫時，正在打字的框不要掉焦點
   window.scrollTo(0,y);
   ui.pop=null;
   if(Object.keys(ui.cheer).length){
@@ -659,12 +670,12 @@ function render(m,nocollect){
       ui.cheer={};
       var els=$('app').querySelectorAll('.cheer-fx');
       for(var i=0;i<els.length;i++)els[i].parentNode.removeChild(els[i]);
-    },3000);
+    },6000);
   }
 }
 
 /* ---------- 送出 ---------- */
-function toast(text,isErr){var t=$('toast');t.textContent=text+(isErr?'（點一下這裡關閉）':'');t.className=isErr?'err':'';t.style.display='block';}
+function toast(text,isErr){var t=$('toast');t.textContent=text+(isErr?'（點一下這裡關閉）':'');t.className=isErr?'err':'';t.style.display='block';if(Q.length)showSaving();}
 function untoast(){$('toast').style.display='none';}
 $('toast').addEventListener('click',untoast);
 
@@ -712,11 +723,11 @@ document.addEventListener('visibilitychange',function(){   // 網頁開著過夜
 var Q=[];        // 排隊等存的動作，一次只送一筆，照按的順序
 var LAST='';     // 最後一次從試算表回來的資料（存檔失敗時退回用）
 function nowStr(){var d=new Date();function z(n){return (n<10?'0':'')+n;}return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());}
-function showSaving(){var e=$('saving');if(Q.length){e.textContent='存檔中…（'+Q.length+'）';e.style.display='block';}else e.style.display='none';}
+function showSaving(){var e=$('saving'),tt=$('toast');if(Q.length){e.textContent='存檔中…（'+Q.length+'）先別關網頁';e.style.bottom=(tt.style.display==='block'?tt.offsetHeight+22:12)+'px';e.style.display='block';}else{e.style.display='none';if(tt.style.display==='block'&&tt.className!=='err')untoast();}}
 function fixUnreplied(t){t.unreplied=!t.archived&&t.status!=='完成'&&t.owners.some(function(o){return !t.replies.some(function(r){return r.who===o;})&&!t.ms.some(function(x){return x.done&&x.by===o;});});}
 function autoStatus(t){var d=t.ms.filter(function(x){return x.done;}).length,all=t.ms.length>0&&d===t.ms.length;
   if(all)t.status='完成';else if(t.status==='完成')t.status='進行中';else if(t.status==='未開始'&&d>0)t.status='進行中';}
-function quick(fn,payload,apply){
+function quick(fn,payload,apply,dk){   // dk：這個動作用到的打字欄；存檔失敗時把字還回去
   if(ui.busy||ui.stale)return;
   collect();
   var t=findTask(MODEL,payload.id);if(!t)return;
@@ -724,7 +735,7 @@ function quick(fn,payload,apply){
   if(was!=='完成'&&t.status==='完成'){t.updated=MODEL.data.today+' '+nowStr().slice(11)+':00';if(Object.prototype.hasOwnProperty.call(t,'doneDate'))t.doneDate=MODEL.data.today;}
   if(was==='完成'&&t.status!=='完成'&&Object.prototype.hasOwnProperty.call(t,'doneDate'))t.doneDate='';   // 和伺服器同一條：離開完成就清掉完成日
   t.overdue=!!(t.due&&MODEL.data&&MODEL.data.today>t.due&&t.status!=='完成');   // 和伺服器同一條規則，存檔中那幾秒也不會算錯逾期
-  Q.push({fn:fn,p:payload});
+  Q.push({fn:fn,p:payload,dk:dk,dv:dk?(payload.text||''):''});
   render(MODEL,true);showSaving();
   if(Q.length===1)runQ();
 }
@@ -743,10 +754,12 @@ function runQ(){
   }).catch(function(e){qFail('不確定有沒有存成功（'+(e&&e.message?e.message:e)+'）');});
 }
 function qFail(msg){
+  collect();   // 先收畫面上現在的字，再把沒存成功的還回去
+  Q.forEach(function(j){if(j.dk&&j.dv&&!drafts[j.dk]){drafts[j.dk]=j.dv;if(j.dk.indexOf('stuck:')===0){ui.stuck[j.p.id]=true;ui.det[j.p.id]=true;}}});   // 沒存成功的打字還回去，不用重打
   var n=Q.length;Q=[];showSaving();ui.cheer={};
   toast(msg+'。畫面已換回試算表裡的樣子'+(n>1?'，後面 '+(n-1)+' 個動作也沒有存，請再按一次':'')+'。',true);
   if(LAST)MODEL=JSON.parse(LAST);
-  ui.stale=true;ui.staleErr=null;render(MODEL);
+  ui.stale=true;ui.staleErr=null;render(MODEL,true);
   apiGet(false).then(function(m){if(m&&m.state==='ok'){MODEL=m;LAST=JSON.stringify(m);cacheSave(m);}ui.stale=false;render(MODEL);})
     .catch(function(){ui.stale=false;render(MODEL);});
 }
@@ -840,7 +853,7 @@ $('app').addEventListener('click',function(e){
       var mt='';
       t.ms.forEach(function(x){if(x.order===order){x.done=want;x.by=want?MODEL.me.name:'';x.at=want?(MODEL.data.today+nowStr().slice(10)):'';mt=x.text;}});
       autoStatus(t);
-      if(!want)return;
+      if(!want){delete ui.cheer[id];return;}
       var d=t.ms.filter(function(x){return x.done;}).length;
       ui.pop={id:id,order:order};
       ui.cheer[id]=(d===t.ms.length)?{text:'全部完成！',gold:true,ms:mt}:{text:'又前進一格　'+d+'／'+t.ms.length,gold:false,ms:mt};
@@ -849,6 +862,7 @@ $('app').addEventListener('click',function(e){
     collect();ui.det[id]=!ui.det[id];if(!ui.det[id])ui.stuck[id]=false;render(MODEL,true);
   }else if(act==='stuck'){
     collect();ui.stuck[id]=true;render(MODEL,true);
+    try{var sf=document.querySelector('[data-card="'+id+'"] .stuckf');if(sf){var r=sf.getBoundingClientRect();if(r.bottom>window.innerHeight)sf.scrollIntoView({block:'end',behavior:'smooth'});var ta=sf.querySelector('textarea');if(ta)ta.focus({preventScroll:true});}}catch(e){}
   }else if(act==='stuck-cancel'){
     collect();ui.stuck[id]=false;render(MODEL,true);
   }else if(act==='stuck-go'){
@@ -857,10 +871,12 @@ $('app').addEventListener('click',function(e){
     if(!sText){toast('請先寫卡在哪裡、要誰幫忙',true);return;}
     if(ui.busy||ui.stale)return;
     ui.stuck[id]=false;
-    quick('addReply',{id:id,text:sText},function(t){delete drafts['stuck:'+id];t.replies.push({who:MODEL.me.name,time:nowStr(),text:sText});});   // 先存說明，再改狀態；說明沒存成功，狀態也不會改
+    quick('addReply',{id:id,text:sText},function(t){delete drafts['stuck:'+id];t.replies.push({who:MODEL.me.name,time:nowStr(),text:sText});},'stuck:'+id);   // 先存說明，再改狀態；說明沒存成功，狀態也不會改
     quick('setStatus',{id:id,status:'卡住'},function(t){var was=t.status;t.status='卡住';if(was!=='卡住')t.replies.push({who:MODEL.me.name,time:nowStr(),text:'（狀態改為：卡住）'});});
   }else if(act==='finish'){
     quick('setStatus',{id:id,status:'完成'},function(t){var was=t.status;t.status='完成';if(was!=='完成')t.replies.push({who:MODEL.me.name,time:nowStr(),text:'（狀態改為：完成）'});});
+  }else if(act==='reopen'){
+    quick('setStatus',{id:id,status:'進行中'},function(t){var was=t.status;t.status='進行中';if(was!=='進行中')t.replies.push({who:MODEL.me.name,time:nowStr(),text:'（狀態改為：進行中）'});});
   }else if(act==='unstuck'){
     quick('setStatus',{id:id,status:'進行中'},function(t){var was=t.status;t.status='進行中';if(was!=='進行中')t.replies.push({who:MODEL.me.name,time:nowStr(),text:'（狀態改為：進行中）'});});
   }else if(act==='ack'){
@@ -869,7 +885,7 @@ $('app').addEventListener('click',function(e){
     collect();
     var text=(drafts['reply:'+id]||'').trim();
     if(!text){toast('回覆是空的',true);return;}
-    quick('addReply',{id:id,text:text},function(t){delete drafts['reply:'+id];t.replies.push({who:MODEL.me.name,time:nowStr(),text:text});});
+    quick('addReply',{id:id,text:text},function(t){delete drafts['reply:'+id];t.replies.push({who:MODEL.me.name,time:nowStr(),text:text});},'reply:'+id);
   }else if(act==='archive'){
     var toArch=el.getAttribute('data-to')==='1';
     if(toArch&&ui.armed!==id){ui.armed=id;render(MODEL);return;}   // 第一次按只是確認，再按一次才封存
