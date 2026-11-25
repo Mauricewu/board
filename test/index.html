@@ -290,7 +290,8 @@ function doneToday(t,m){return t.status==='完成'&&!t.archived&&!!(m&&m.data&&m
 function openOrder(list,m){   // 和伺服器同一條排序，但今天完成的當成未完成排，完成後不會跳位
   return list.slice().sort(function(a,b){
     var ga=(a.status==='完成'&&!doneToday(a,m))?1:0,gb=(b.status==='完成'&&!doneToday(b,m))?1:0;if(ga!==gb)return ga-gb;
-    if(!!a.overdue!==!!b.overdue)return a.overdue?-1:1;
+    var od=function(x){return !!x.overdue||(doneToday(x,m)&&!!x.due&&m.data.today>x.due);};   // 今天才完成的逾期交辦照舊排在逾期那一組，不跳位
+    if(od(a)!==od(b))return od(a)?-1:1;
     var da=a.due||'9999-99-99',db=b.due||'9999-99-99';if(da!==db)return da<db?-1:1;
     return (a.line||0)-(b.line||0);});}
 function taipeiToday(){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}catch(e){return '';}}
@@ -572,7 +573,7 @@ function loadModel(btn){
 document.addEventListener('visibilitychange',function(){   // 網頁開著過夜、隔天切回來：日期變了就自動重讀一次
   try{if(document.visibilityState!=='visible')return;
     var td=taipeiToday();
-    if(!td||!MODEL||MODEL.state!=='ok'||!MODEL.data||MODEL.data.today===td||Q.length||ui.busy)return;
+    if(!td||!MODEL||MODEL.state!=='ok'||!MODEL.data||MODEL.data.today===td||Q.length||ui.busy||ui.stale)return;   // 還在讀上次快取的最新資料時不重複讀
     collect();var b=$('reload');if(b){b.disabled=true;b.textContent='讀取中…';}loadModel(b);
   }catch(e){}
 });
@@ -698,7 +699,7 @@ $('app').addEventListener('click',function(e){
     var order=parseInt(el.getAttribute('data-order'),10),want=el.getAttribute('data-to')==='1';
     el.classList[want?'add':'remove']('on');el.textContent=want?'✓':'';
     quick('setMilestone',{id:id,order:order,done:want},function(t){
-      t.ms.forEach(function(x){if(x.order===order){x.done=want;x.by=want?MODEL.me.name:'';x.at=want?nowStr():'';}});
+      t.ms.forEach(function(x){if(x.order===order){x.done=want;x.by=want?MODEL.me.name:'';x.at=want?(MODEL.data.today+nowStr().slice(10)):'';}});
       autoStatus(t);
       if(!want)return;
       var d=t.ms.filter(function(x){return x.done;}).length;
