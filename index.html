@@ -69,7 +69,7 @@ button:disabled{opacity:.5;cursor:default}
 .seg i.pop{animation:pop .5s ease-out}
 @keyframes pop{0%{transform:scaleY(.4)}50%{transform:scaleY(1.7)}100%{transform:scaleY(1)}}
 @media (prefers-reduced-motion:reduce){.seg i.pop{animation:none}}
-.cap{margin-top:8px;color:var(--muted);font-size:13px}.cap b{color:var(--ink)}
+.cap{margin-top:8px;color:var(--muted);font-size:13px}.cap b{color:var(--ink)}.cap b.warnTxt{color:var(--gold)}
 .ms{margin-top:8px}
 .ms .m{padding:6px 0;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center}
 .cb{width:26px;height:26px;border:2px solid #667;border-radius:5px;flex:none;padding:0;background:transparent;color:#000;font-size:16px;line-height:1}
@@ -475,14 +475,27 @@ function foldersHtml(m){
   return '<div class="sechead"><h2>資料夾</h2></div><div class="card">'+fs.map(function(f){
     return '<div class="frow"><a class="lnk" href="'+esc(f.url)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name)+'</a><span class="muted">'+esc(FOLDER_NOTE[f.name]||'')+'</span></div>';}).join('')+'</div>';
 }
+// 會議記錄的來源說明（2026-11-26 起平台讀原文件；舊伺服器沒有 source，照舊說法）
+function meetUrlOk(u){return /^https:\/\/docs\.google\.com\/\S+$/.test(String(u||''));}
+function meetAt(t){var x=/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(String(t||''));return x?(+x[2])+'/'+(+x[3])+' '+x[4]:'';}
+function meetSrcText(mt){
+  var at=meetAt(mt.readAt),has=!!String(mt.text||'').trim();
+  if(mt.source==='doc')return '從原文件讀來的內容'+(at?'（'+at+' 讀取）':'')+'，原文件改了最慢約 10 分鐘會更新。';
+  if(mt.source==='saved'){
+    var go=meetUrlOk(mt.url)?'請點「開啟原文件」':'請告訴 Maurice';
+    if(!has)return '<b class="warnTxt">現在讀不到原文件，'+go+'。</b>';
+    return '<b class="warnTxt">現在讀不到原文件，下面是'+(at?' '+at+' ':'之前')+'讀到的內容；要看最新的'+go+'。</b>';
+  }
+  return '這裡是複製過來的內容，原文件有改的話以原文件為準。';
+}
 function meetingHtml(m,noHead){
   if(noHead)ui.openMeet=true;   // 成員畫面外面已經有一層摺疊，點開就直接看到全文
   var mt=m.data.meeting,h=noHead?'':'<div class="sechead"><h2>最新主管會議記錄</h2></div>';
   if(mt.state==='ok'){
     h+='<div class="card"><div class="ttl">'+esc(mt.title)+'</div>'+
-       '<div class="cap">會議日期 <b>'+fmtDW(mt.date)+'</b>　這裡是複製過來的內容，原文件有改的話以原文件為準。'+
-       (mt.url?'　<a class="lnk" href="'+esc(mt.url)+'" target="_blank" rel="noopener noreferrer">開啟原文件</a>':'')+'</div>'+
-       '<details class="mt"'+(ui.openMeet?' open':'')+' ontoggle="ui.openMeet=this.open"><summary>展開全文</summary><div class="mtext">'+esc(mt.text)+'</div></details></div>';
+       '<div class="cap">會議日期 <b>'+fmtDW(mt.date)+'</b>　'+meetSrcText(mt)+
+       (meetUrlOk(mt.url)?'　<a class="lnk" href="'+esc(mt.url)+'" target="_blank" rel="noopener noreferrer">開啟原文件</a>':'')+'</div>'+
+       (String(mt.text||'').trim()?'<details class="mt"'+(ui.openMeet?' open':'')+' ontoggle="ui.openMeet=this.open"><summary>展開全文</summary><div class="mtext">'+esc(mt.text)+'</div></details>':'')+'</div>';
   }else if(mt.state==='bad'){
     h+='<div class="box warn"><h3>會議記錄的資料有問題，所以沒有顯示</h3><p>'+(isBoss(m)?'請看上方黃色提示寫的是「設定」分頁第幾列。':'請告訴 Maurice。')+'</p></div>';
   }else{
