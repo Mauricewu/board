@@ -476,12 +476,13 @@ function foldersHtml(m){
     return '<div class="frow"><a class="lnk" href="'+esc(f.url)+'" target="_blank" rel="noopener noreferrer">'+esc(f.name)+'</a><span class="muted">'+esc(FOLDER_NOTE[f.name]||'')+'</span></div>';}).join('')+'</div>';
 }
 // 會議記錄的來源說明（2026-11-26 起平台讀原文件；舊伺服器沒有 source，照舊說法）
+function meetUrlOk(u){return /^https:\/\/docs\.google\.com\/\S+$/.test(String(u||''));}
 function meetAt(t){var x=/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})$/.exec(String(t||''));return x?(+x[2])+'/'+(+x[3])+' '+x[4]:'';}
 function meetSrcText(mt){
   var at=meetAt(mt.readAt),has=!!String(mt.text||'').trim();
   if(mt.source==='doc')return '從原文件讀來的內容'+(at?'（'+at+' 讀取）':'')+'，原文件改了最慢約 10 分鐘會更新。';
   if(mt.source==='saved'){
-    var go=mt.url?'請點「開啟原文件」':'請告訴 Maurice';
+    var go=meetUrlOk(mt.url)?'請點「開啟原文件」':'請告訴 Maurice';
     if(!has)return '<b class="warnTxt">現在讀不到原文件，'+go+'。</b>';
     return '<b class="warnTxt">現在讀不到原文件，下面是'+(at?' '+at+' ':'之前')+'讀到的內容；要看最新的'+go+'。</b>';
   }
@@ -493,7 +494,7 @@ function meetingHtml(m,noHead){
   if(mt.state==='ok'){
     h+='<div class="card"><div class="ttl">'+esc(mt.title)+'</div>'+
        '<div class="cap">會議日期 <b>'+fmtDW(mt.date)+'</b>　'+meetSrcText(mt)+
-       (mt.url?'　<a class="lnk" href="'+esc(mt.url)+'" target="_blank" rel="noopener noreferrer">開啟原文件</a>':'')+'</div>'+
+       (meetUrlOk(mt.url)?'　<a class="lnk" href="'+esc(mt.url)+'" target="_blank" rel="noopener noreferrer">開啟原文件</a>':'')+'</div>'+
        (String(mt.text||'').trim()?'<details class="mt"'+(ui.openMeet?' open':'')+' ontoggle="ui.openMeet=this.open"><summary>展開全文</summary><div class="mtext">'+esc(mt.text)+'</div></details>':'')+'</div>';
   }else if(mt.state==='bad'){
     h+='<div class="box warn"><h3>會議記錄的資料有問題，所以沒有顯示</h3><p>'+(isBoss(m)?'請看上方黃色提示寫的是「設定」分頁第幾列。':'請告訴 Maurice。')+'</p></div>';
