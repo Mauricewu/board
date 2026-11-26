@@ -192,8 +192,10 @@ var ROLE_SPRITE = { '內場主管': 'neichang', '外場主管': 'waichang' };
 var CHI = { W: { walk1: 5.69, walk2: 5.6, howl1: 6.24, howl2: 6.15 }, X_MIN: 41, X_MAX: 59, BOTTOM: 12, SPEED: 4, WALK_MS: 10000, HOWL_MS: 2500, BUB_BOTTOM: 28 };
 var OFFICE = { raf: 0, x: 50, dir: 1, g0: null, last: null };
 /* 特殊動作（內場舉鍋子、外場哭「凹嗚嗚嗚嗚」、吉娃娃嚎叫）：各自每 30 秒一次、一次 2.5 秒，第一次分別在第 10、20、30 秒，錯開不重疊；趴睡的人不做。 */
-var SPECIAL = { EVERY: 30000, MS: 2500, CHI_FIRST: 10000 };
-function inSpecial(el,first){return el>=first&&(el-first)%SPECIAL.EVERY<SPECIAL.MS;}
+var SPECIAL = { EVERY: 30000, MS: 2500, CHI_FIRST: 10000, CHI_EVERY_MK: 10000 };
+function inSpecial(el,first,every){every=every||SPECIAL.EVERY;return el>=first&&(el-first)%every<SPECIAL.MS;}
+/* 吉娃娃嚎叫間隔：行銷（又仁）打開時每 10 秒，老闆與兩位主管打開時照舊每 30 秒（2026-11-26 Maurice 選 B）。 */
+function chiEvery(){try{return (MODEL&&MODEL.me&&MODEL.me.role==='行銷')?SPECIAL.CHI_EVERY_MK:SPECIAL.EVERY;}catch(e){return SPECIAL.EVERY;}}
 
 function officeModel(m){
   var tasks=(m.data&&m.data.tasks)||[], res={neichang:null,waichang:null,chi:null};
@@ -274,7 +276,7 @@ function startOffice(){
           var mode=spOn?'sp':'base';if(s.pc.getAttribute('data-mode')!==mode)s.pc.setAttribute('data-mode',mode);
         });
         if(chi){
-          var alert=chi.st==='alert',howl=inSpecial(el,SPECIAL.CHI_FIRST),key,bob=0,txt;
+          var alert=chi.st==='alert',howl=inSpecial(el,SPECIAL.CHI_FIRST,chiEvery()),key,bob=0,txt;
           if(howl){
             key=(Math.floor((el-SPECIAL.CHI_FIRST)/400)%2)?'howl2':'howl1';txt='凹嗚嗚嗚嗚';
           }else{
